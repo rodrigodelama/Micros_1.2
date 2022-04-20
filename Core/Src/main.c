@@ -27,10 +27,10 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include <stdlib.h>
 #include "stm32l152c_discovery.h"
 #include "stm32l152c_discovery_glass_lcd.h"
 #include "SDM_Utils.h"
-#include <stdlib.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -121,14 +121,6 @@ void EXTI9_5_IRQHandler(void) //ISR for EXTI7 & EXTI6
 }
 
 //TIMERS
-//TOC timer 3 ch4
-/*
-void TIM3_IRQHandler(void)
-{
-  //timer 3 sr with a 2 (ch1) we may check if it arrived
-}
-*/
-
 //TIC timer 4 ch1 and ch2
 void TIM4_IRQHandler(void) //TIC
 {
@@ -143,18 +135,18 @@ void TIM4_IRQHandler(void) //TIC
     //winner = 2; //CH1 is for PB6 - P2
     time_4ch1 = TIM4->CCR1;
     if(time_4ch1 < 0) time_4ch1 += 0x0FFFF; //to avoid overflows
-    TIM4->SR = 0;
+    //TIM4->SR = 0;
   }
   //CH2
   if((TIM4->SR &0x0004) != 0)
   {
     //winner = 1; //CH2 is for PB7 - P1
     time_4ch2 = TIM4->CCR2;
-    if(time_4ch2 < 0) time_4ch2 += 0x0FFFF; //to avoid overflows
-    TIM4->SR = 0;
+    if(time_4ch2 < 0) time_4ch2 += 0x0FFFF;
+    //TIM4->SR = 0;
   }
+  TIM4->SR = 0;
 }
-
 /* USER CODE END 0 */
 
 /**
@@ -254,35 +246,35 @@ int main(void)
   /* TIM3 --------------------------------------------------------------------*/
   //No pin assignment, we just plainly use it for the TOC
   //SET-UP for TIMs 3, CH3 & CH4 - TOCs, for random LED off and TBD
-  TIM3->CR1 = 0x0000; // ON IN CODE BELOW
-  TIM3->CR2 = 0x0000; // Always set to 0
-  TIM3->SMCR = 0x0000; // Always set to 0
-  TIM3->PSC = 31999;
-  TIM3->CNT = 0;
-  TIM3->ARR = 0xFFFF; //USED IN PWN
-  TIM3->DIER = 0x0000; // No IRQ after successful comparison
-  TIM3->CCMR1 = 0x0000;  //CCyS = 0 (TOC)
-                         //OCyM = 000 (no external output)
-                         //OCyPE = 0 (no preload)
-  TIM3->CCER = 0x0000;   //CCyP = 0 (always in TOC)
-                         //CCyE = (external output disabled)
+  TIM3->CR1 = 0x0000;   // ON IN CODE BELOW
+  TIM3->CR2 = 0x0000;   // Always set to 0
+  TIM3->SMCR = 0x0000;  // Always set to 0
+  TIM3->PSC = 31999;    //Means fclk/(PSC+1)
+  TIM3->CNT = 0;        //Initiallized to 0
+  TIM3->ARR = 0xFFFF;   //USED IN PWN so set to max
+  TIM3->DIER = 0x0000;  
+  TIM3->CCMR1 = 0x0000; //CCyS = 0 (TOC)
+                        //OCyM = 000 (no external output)
+                        //OCyPE = 0 (no preload)
+  TIM3->CCER = 0x0000;  //CCyP = 0 (always in TOC)
+                        //CCyE = 0 (external output disabled)
   /* TIM4 --------------------------------------------------------------------*/
   //Assigned to PB7 and PB7
   //SET-UP for TIMs 4, CH1 & CH2 - TICs
-  TIM4->CR1 = 0x0000; //Set to 0 for Counter OFF initially
-                      //It will be turned ON in code below
-                      //ARPE off because NOT PWM
-  TIM4->CR2 = 0x0000; //Always set to 0 in this course
-  TIM4->SMCR = 0x0000; //Always set to 0 in this course
-  TIM4->PSC = 31999; //Means fclk/(PSC+1)
-  TIM4->CNT = 0;     //Initiallized to 0
-  TIM4->ARR = 0xFFFF; //USED IN PWN so set to max
-  TIM4->DIER = 0X0006; //IRQ activation for CH1 & 2
-  TIM4->CCMR1 = 0x0000; //CCyS = 0 (TOC)
+  TIM4->CR1 = 0x0000;   //Set to 0 for Counter OFF initially
+                        //It will be turned ON in code below
+                        //ARPE off because NOT PWM
+  TIM4->CR2 = 0x0000;   //Always set to 0 in this course
+  TIM4->SMCR = 0x0000;  //Always set to 0 in this course
+  TIM4->PSC = 31999; 
+  TIM4->CNT = 0;     
+  TIM4->ARR = 0xFFFF;   
+  TIM4->DIER = 0X0006;  //IRQ activation for CH1 & 2
+  TIM4->CCMR1 = 0x0000; //
                         //OCyM = 000 (no external output)
                         //OCyPE = 0 (no preload)
   TIM4->CCER = 0x0033;  //CCyP = 1 (falling edge)
-                        //CCyE = 1 (capture enabled)
+                        //CCyE = 1 (input capture enabled)
 
   /* LEDs ---------------------------------------------------------------------*/
   //LED1
@@ -307,7 +299,7 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-    //Requirements
+    //Global Requirements
     //Display GAME 1 (initially) --> DONE IN GLOBAL VAR DECLARATION
     //If the USER BUTTON is pressed, change to GAME 2 (at ANY time) --> global if
     //In GAME 1, wait predetermined time and start (use espera() function)
@@ -334,43 +326,35 @@ int main(void)
             BSP_LCD_GLASS_Clear(); //Clear LCD
             BSP_LCD_GLASS_DisplayString((uint8_t*)" GAME1");
             espera(2*sec);
-
+            if (prev_game != game) break;
             //GAME STARTS HERE
             BSP_LCD_GLASS_Clear(); //Not strictly needed since we are printing the same No. of chars to display
             BSP_LCD_GLASS_DisplayString((uint8_t*)" READY");
             espera(2*sec);
-
+            if (prev_game != game) break;
             BSP_LCD_GLASS_Clear();
             BSP_LCD_GLASS_DisplayString((uint8_t*)"  GO");
 
             //Waiting for users to input
-            while ((game == 1) && (winner == 0)) //(game == 1) is also necessary in case we want to change games here
+            while (winner == 0)
             {
               playing = 1;
-              if (prev_game != game) break;  //Not sure if needed
+              if (prev_game != game) break;
 
               //Start counters
-              TIM3->CR1 |= BIT_0;   //set CEN = 1, Starts the counter
+              TIM3->CR1 |= BIT_0;   //Set CEN = 1, Starts the counter
               TIM3->EGR |= BIT_0;   //UG = 1 -> Generate an update event to update all registers
-              TIM3->SR = 0;          //clear counter flags
-              //mem_slot = &
-              randn = random_num(0, 5000);
-              TIM3->CCR1 = randn; //6969; //Should work, but check with 4*sec for example
+              TIM3->SR = 0;         //clear counter flags
+              randn = random_num(0, 4000); //Before 4 secs at any RANDOM time, LED1 ON
+              TIM3->CCR1 = randn;
 
               TIM4->CR1 |= BIT_0;
               TIM4->EGR |= BIT_0;
 
-              //Before 10 secs at ANY time, LED1 ON
-              //Random timer reaches zero - led
-              
-              /**
-               * Create an IRQ that starts when times
-               * 
-               */
-
               while((TIM3->SR &0x0002) == 0); //loop until there is an event in timer
               TIM3->SR &= ~(0x0002); //clear flag after event
-              TIM4->SR = 0; //Clear all TIM4 flags
+              //TIM4->SR = 0; //Clear all TIM4 flags
+
               GPIOA->BSRR = (1 << 12); // LED ON while no player has pressed their button yet
 
               if (prev_game != game) break;
@@ -407,13 +391,7 @@ int main(void)
         case 2: // GAME 2 - COUNTDOWN
           while (game == 2)
           {
-            //TODO: COUNTDOWN
-            BSP_LCD_GLASS_Clear();
-            BSP_LCD_GLASS_DisplayString((uint8_t*)" GAME2");
-            espera(2*sec);
-            //if (prev_game != game) break;
-
-            //COUNTDOWN GAME
+            //TODO:COUNTDOWN GAME
             //users are displayed the countdown in real time from 10 in real time
             //at a random time (a while before 0)
             //the countdown STOPS being displayed
@@ -429,11 +407,16 @@ int main(void)
             //undertime if TIM3 hasnt reached 0 so do operation (time_to_zero - input_time)
 
             BSP_LCD_GLASS_Clear();
+            BSP_LCD_GLASS_DisplayString((uint8_t*)" GAME2");
+            espera(2*sec);
+            if (prev_game != game) break;
+
+            BSP_LCD_GLASS_Clear();
             BSP_LCD_GLASS_DisplayString((uint8_t*)" READY");
             espera(2*sec);
-            //if (prev_game != game) break;
+            if (prev_game != game) break;
             BSP_LCD_GLASS_Clear();
-            BSP_LCD_GLASS_DisplayString((uint8_t*)" SET");
+            BSP_LCD_GLASS_DisplayString((uint8_t*)" GO");
           }
         break;
 
