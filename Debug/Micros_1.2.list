@@ -570,17 +570,17 @@ void EXTI9_5_IRQHandler(void) //ISR for EXTI7 & EXTI6
  80005d6:	2b01      	cmp	r3, #1
  80005d8:	d109      	bne.n	80005ee <EXTI9_5_IRQHandler+0x4e>
     {
-      winner = 1;
- 80005da:	4b19      	ldr	r3, [pc, #100]	; (8000640 <EXTI9_5_IRQHandler+0xa0>)
- 80005dc:	2201      	movs	r2, #1
- 80005de:	601a      	str	r2, [r3, #0]
       GPIOA->BSRR = (1 << 12) << 16;
- 80005e0:	4b18      	ldr	r3, [pc, #96]	; (8000644 <EXTI9_5_IRQHandler+0xa4>)
- 80005e2:	f04f 5280 	mov.w	r2, #268435456	; 0x10000000
- 80005e6:	619a      	str	r2, [r3, #24]
+ 80005da:	4b19      	ldr	r3, [pc, #100]	; (8000640 <EXTI9_5_IRQHandler+0xa0>)
+ 80005dc:	f04f 5280 	mov.w	r2, #268435456	; 0x10000000
+ 80005e0:	619a      	str	r2, [r3, #24]
       playing = 0;
- 80005e8:	4b14      	ldr	r3, [pc, #80]	; (800063c <EXTI9_5_IRQHandler+0x9c>)
- 80005ea:	2200      	movs	r2, #0
+ 80005e2:	4b16      	ldr	r3, [pc, #88]	; (800063c <EXTI9_5_IRQHandler+0x9c>)
+ 80005e4:	2200      	movs	r2, #0
+ 80005e6:	601a      	str	r2, [r3, #0]
+      winner = 1;
+ 80005e8:	4b16      	ldr	r3, [pc, #88]	; (8000644 <EXTI9_5_IRQHandler+0xa4>)
+ 80005ea:	2201      	movs	r2, #1
  80005ec:	601a      	str	r2, [r3, #0]
     }
     // BUTTON 2 is pressed, a rising edge is detected in PB6
@@ -595,17 +595,17 @@ void EXTI9_5_IRQHandler(void) //ISR for EXTI7 & EXTI6
  80005fe:	2b01      	cmp	r3, #1
  8000600:	d109      	bne.n	8000616 <EXTI9_5_IRQHandler+0x76>
     {
-      winner = 2;
- 8000602:	4b0f      	ldr	r3, [pc, #60]	; (8000640 <EXTI9_5_IRQHandler+0xa0>)
- 8000604:	2202      	movs	r2, #2
- 8000606:	601a      	str	r2, [r3, #0]
       GPIOA->BSRR = (1 << 12) << 16;
- 8000608:	4b0e      	ldr	r3, [pc, #56]	; (8000644 <EXTI9_5_IRQHandler+0xa4>)
- 800060a:	f04f 5280 	mov.w	r2, #268435456	; 0x10000000
- 800060e:	619a      	str	r2, [r3, #24]
+ 8000602:	4b0f      	ldr	r3, [pc, #60]	; (8000640 <EXTI9_5_IRQHandler+0xa0>)
+ 8000604:	f04f 5280 	mov.w	r2, #268435456	; 0x10000000
+ 8000608:	619a      	str	r2, [r3, #24]
       playing = 0;
- 8000610:	4b0a      	ldr	r3, [pc, #40]	; (800063c <EXTI9_5_IRQHandler+0x9c>)
- 8000612:	2200      	movs	r2, #0
+ 800060a:	4b0c      	ldr	r3, [pc, #48]	; (800063c <EXTI9_5_IRQHandler+0x9c>)
+ 800060c:	2200      	movs	r2, #0
+ 800060e:	601a      	str	r2, [r3, #0]
+      winner = 2;
+ 8000610:	4b0c      	ldr	r3, [pc, #48]	; (8000644 <EXTI9_5_IRQHandler+0xa4>)
+ 8000612:	2202      	movs	r2, #2
  8000614:	601a      	str	r2, [r3, #0]
     }
   }
@@ -630,8 +630,8 @@ void EXTI9_5_IRQHandler(void) //ISR for EXTI7 & EXTI6
  8000636:	bf00      	nop
  8000638:	40010400 	.word	0x40010400
  800063c:	200001ec 	.word	0x200001ec
- 8000640:	200001e8 	.word	0x200001e8
- 8000644:	40020000 	.word	0x40020000
+ 8000640:	40020000 	.word	0x40020000
+ 8000644:	200001e8 	.word	0x200001e8
 
 08000648 <TIM4_IRQHandler>:
 
@@ -1487,9 +1487,9 @@ int main(void)
  8000b94:	200001fc 	.word	0x200001fc
  8000b98:	20000200 	.word	0x20000200
  8000b9c:	200001f4 	.word	0x200001f4
-             *  ADC1->CR2 |= 0x00000001; // ADON = 1 (ADC powered on)
-                while ((ADC1->SR&0x0040)==0); // If ADCONS = 0, wait until converter is ready
-                ADC1->CR2 |= 0x40000000; // When ADCONS = 1, start conversion (SWSTART = 1)
+            ADC1->CR2 |= 0x00000001; // ADON = 1 (ADC powered on)
+            while ((ADC1->SR&0x0040)==0); // If ADCONS = 0, wait until converter is ready
+            ADC1->CR2 |= 0x40000000; // When ADCONS = 1, start conversion (SWSTART = 1)
              */
             
             BSP_LCD_GLASS_Clear();

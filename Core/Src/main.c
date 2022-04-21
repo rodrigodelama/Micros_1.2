@@ -110,16 +110,16 @@ void EXTI9_5_IRQHandler(void) //ISR for EXTI7 & EXTI6
     // BUTTON 1 is pressed, a rising edge is detected in PB7
     if (EXTI->PR &(1 << 7) && (playing == 1)) // 00000000010000000 in pending register of ISER[0]
     {
-      winner = 1;
-      GPIOA->BSRR = (1 << 12) << 16;
+      GPIOA->BSRR = (1 << 12) << 16;''
       playing = 0;
+      winner = 1;
     }
     // BUTTON 2 is pressed, a rising edge is detected in PB6
     if (EXTI->PR &(1 << 6) && (playing == 1)) // 00000000001000000 in pending register
     {
-      winner = 2;
       GPIOA->BSRR = (1 << 12) << 16;
       playing = 0;
+      winner = 2;
     }
   }
   //Always clear flags to avoid hanging
@@ -131,10 +131,6 @@ void EXTI9_5_IRQHandler(void) //ISR for EXTI7 & EXTI6
 //TIC timer 4 CH1 and CH2
 void TIM4_IRQHandler(void) //TIC
 {
-  //checks if it has been activated if so makes it work
-  //checks if the SR has been flagged or if its
-  //checks if the event has come
-  
   //CH1
   if((TIM4->SR &BIT_1) != 0) //0x2
   {
@@ -142,7 +138,7 @@ void TIM4_IRQHandler(void) //TIC
     //winner = 2; //CH1 is for PB6 - P2
     time_4ch1 = TIM4->CCR1;
     if(time_4ch1 < 0) time_4ch1 += 0x0FFFF; //to avoid overflows
-    //TIM4->SR = 0;
+
   }
   //CH2
   if((TIM4->SR &BIT_2) != 0) //0x4
@@ -150,7 +146,7 @@ void TIM4_IRQHandler(void) //TIC
     //winner = 1; //CH2 is for PB7 - P1
     time_4ch2 = TIM4->CCR2;
     if(time_4ch2 < 0) time_4ch2 += 0x0FFFF;
-    //TIM4->SR = 0;
+
   }
   TIM4->SR = 0;
 }
@@ -445,9 +441,9 @@ int main(void)
 
             //TODO: Add to code for checkpoint 3
             /**
-             *  ADC1->CR2 |= 0x00000001; // ADON = 1 (ADC powered on)
-                while ((ADC1->SR&0x0040)==0); // If ADCONS = 0, wait until converter is ready
-                ADC1->CR2 |= 0x40000000; // When ADCONS = 1, start conversion (SWSTART = 1)
+            ADC1->CR2 |= 0x00000001; // ADON = 1 (ADC powered on)
+            while ((ADC1->SR&0x0040)==0); // If ADCONS = 0, wait until converter is ready
+            ADC1->CR2 |= 0x40000000; // When ADCONS = 1, start conversion (SWSTART = 1)
              */
             
             BSP_LCD_GLASS_Clear();
