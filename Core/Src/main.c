@@ -52,21 +52,24 @@
 
 LCD_HandleTypeDef hlcd;
 
+TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim3;
 TIM_HandleTypeDef htim4;
 
 /* USER CODE BEGIN PV */
 //GLOBAL VARS & DEFINITIONS
 unsigned int prev_game = 0;
-unsigned int game = 1; //game 1 is the starting point
-unsigned int winner = 0; //Init to 0, if it never changes, it will generate an error
-unsigned int playing = 0; // to not activate the interrupts unless we are awaiting
+unsigned int game = 1; //GAME1 is the starting point
+unsigned int winner = 0; //Initialised to 0, if it never changes, it will generate an error
+unsigned int playing = 0; //Maintains the button interrupts disabled unless we are awaiting
 
 unsigned int time_3;
 unsigned int time_4ch1;
 unsigned int time_4ch2;
 
-unsigned int diff;
+unsigned short diff;
+uint8_t text[6]; //ASCII character array to output in the discovery LCD
+
 unsigned int randn;
 /* USER CODE END PV */
 
@@ -78,6 +81,7 @@ static void MX_LCD_Init(void);
 static void MX_TS_Init(void);
 static void MX_TIM3_Init(void);
 static void MX_TIM4_Init(void);
+static void MX_TIM2_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -88,7 +92,7 @@ static void MX_TIM4_Init(void);
 void EXTI0_IRQHandler(void)
 {
   // USER BUTTON is pressed, a rising edge is detected in PA0
-  if ((EXTI->PR&BIT_0) != 0) // Is EXTI0 flag on? //0000000000000001 in the Pending Register of ISER[0]
+  if ((EXTI->PR &BIT_0) != 0) // Is EXTI0 flag on? //0000000000000001 in the Pending Register of ISER[0]
   {
     game++; //If at GAME 1, proceed to GAME 2
     if (game > 2) game = 1; //Reset to 1 after requesting change from GAME 2
@@ -100,16 +104,16 @@ void EXTI0_IRQHandler(void)
 // NVIC->ISER[0] pin 23 for EXTIs 9 to 5
 void EXTI9_5_IRQHandler(void) //ISR for EXTI7 & EXTI6
 {
-  if (((EXTI->PR&BIT_7) || (EXTI->PR&BIT_6)) != 0) //most general aproach --> (EXTI->PR != 0)
+  if (((EXTI->PR &BIT_7) || (EXTI->PR &BIT_6)) != 0) //most general aproach --> (EXTI->PR != 0)
   {
     // BUTTON 1 is pressed, a rising edge is detected in PB7
-    if (EXTI->PR & (1 << 7) && (playing == 1)) // 00000000010000000 in pending register of ISER[0]
+    if (EXTI->PR &(1 << 7) && (playing == 1)) // 00000000010000000 in pending register of ISER[0]
     {
       winner = 1;
-      GPIOA->BSRR = (1 << 12) << 16; //Turn off the LED after a win
+      GPIOA->BSRR = (1 << 12) << 16;
     }
     // BUTTON 2 is pressed, a rising edge is detected in PB6
-    if (EXTI->PR & (1 << 6) && (playing == 1)) // 00000000001000000 in pending register
+    if (EXTI->PR &(1 << 6) && (playing == 1)) // 00000000001000000 in pending register
     {
       winner = 2;
       GPIOA->BSRR = (1 << 12) << 16;
@@ -129,7 +133,7 @@ void TIM4_IRQHandler(void) //TIC
   //checks if the event has come
   
   //CH1
-  if((TIM4->SR &0x0002) != 0)
+  if((TIM4->SR &BIT_1) != 0) //0x2
   {
     //Code below - needed or not????
     //winner = 2; //CH1 is for PB6 - P2
@@ -138,7 +142,7 @@ void TIM4_IRQHandler(void) //TIC
     //TIM4->SR = 0;
   }
   //CH2
-  if((TIM4->SR &0x0004) != 0)
+  if((TIM4->SR &BIT_2) != 0) //0x4
   {
     //winner = 1; //CH2 is for PB7 - P1
     time_4ch2 = TIM4->CCR2;
@@ -182,6 +186,7 @@ int main(void)
   MX_TS_Init();
   MX_TIM3_Init();
   MX_TIM4_Init();
+  MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
   //DECLARATION OF PERIPHERALS WE WILL USE
 
@@ -204,7 +209,7 @@ int main(void)
 
   //USING I/O PINS 7 & 6 FOR PLAYER BUTTONS 1 & 2 RESPECTIVELY
   /* PB7 ---------------------------------------------------------------------*/
-  //PB7 (BUTTON 1) - digital input (00)
+  //PB7 (BUTTON 1) - digital input (00) - w7 AF TIM4_CH2
   //Set PB7 to 10 for Alternate Functions (AFs)
   GPIOB->MODER |= (1 << (7*2 + 1));
   GPIOB->MODER &= ~(1 << (7*2));
@@ -220,12 +225,11 @@ int main(void)
                     // Sets a 1 in bit 12 see page 145 of the manual
   EXTI->RTSR &= ~(BIT_7); // Disables rising edge in EXTI7
   EXTI->FTSR |= BIT_7; // Enables falling edge in EXTI7
-  EXTI->IMR |= BIT_7; // Enables the interrupt
+  EXTI->IMR |= BIT_7; // Enables the interrupt after setup
   NVIC->ISER[0] |= (1 << 23); // EXTI7 has position 23 in ISER[0]
 
   /* PB6 ---------------------------------------------------------------------*/
-  //PB6 (BUTTON 2) - digital input (00)
-  //TIM4_CH1
+  //PB6 (BUTTON 2) - digital input (00) - w/ AF TIM4_CH1
   //Set PB6 to 10 for AFs
   GPIOB->MODER |= (1 << (6*2 + 1));
   GPIOB->MODER &= ~(1 << (6*2));
@@ -276,8 +280,31 @@ int main(void)
   TIM4->CCER = 0x0033;  //CCyP = 1 (falling edge)
                         //CCyE = 1 (input capture enabled)
 
-  /* LEDs ---------------------------------------------------------------------*/
-  //LED1
+  //ADC & Buzzer
+  /* ADC_IN4 ------------------------------------------------------------------*/
+  //PA4 as analog
+  GPIOA->MODER |= (1 << (4*2 + 1));
+  GPIOA->MODER |= (1 << (4*2));
+  ADC1->CR2 &= ~(0x00000001); // ADON = 0 (ADC powered off initially)
+  ADC1->CR1 = 0x00000000;     // OVRIE = 0 (overrun IRQ disabled)
+                              // RES = 00 (resolution = 12 bits)
+                              // SCAN = 0 (scan mode disabled)
+                              // EOCIE = 0 (EOC IRQ disabled)
+  ADC1->CR2 = 0x00000412;     // EOCS = 1 (EOC is activated after each conversion)
+                              // DELS = 001 (delay till data is read)
+                              // CONT = 1 (continuous conversion)
+  ADC1->SQR1 = 0x00000000;    // Set to 0 - activates 1 channel
+  ADC1->SQR5 = 0x00000004;    // Selected channel is AIN4
+
+  /* BUZZER -------------------------------------------------------------------*/
+  //PA5 as AF because we want it as PWM (send different frequencies at different points)
+  GPIOA->MODER |= (1 << (5*2 + 1));
+  GPIOA->MODER &= ~(1 << (5*2));
+  //AF for TIM2_CH1
+  GPIOB->AFR[0] |= (0x02 << (5*4)); // Writes 0010 in AFRL5
+
+  //LEDs
+  /* LED1 ---------------------------------------------------------------------*/
   //PA12 (EXTERNAL LED1) - AF
   GPIOA->MODER &= ~(1 << (12*2 + 1));
   GPIOA->MODER |= (1 << (12*2));
@@ -285,7 +312,7 @@ int main(void)
   //Set up with pull-up resistor (01)
   GPIOA->PUPDR &= ~(1 << (12*2 + 1));
   GPIOA->PUPDR |= (1 << (12*2));
-  //LED2
+  /* LED2 ---------------------------------------------------------------------*/
   //PD2 (EXTERNAL LED2) - digital output (01)
   GPIOD->MODER &= ~(1 << (2*2 + 1));
   GPIOD->MODER |= (1 << (2*2));
@@ -307,13 +334,16 @@ int main(void)
     //Global IF condition, so we may immediately switch between games
     //(a WHILE would force us to finish the code execution inside)
 
+    //INITIAL SETUP before each game run
     //All LEDs shall be initially off - when changing game modes, upon a restart of the main while loop
     GPIOA->BSRR = (1 << 12) << 16;
     GPIOD->BSRR = (1 << 2) << 16;
-
     //Clear all timer flags to be used
-    TIM4->SR = 0; // CLEAR FLAGS
+    TIM4->SR = 0;
     TIM3->SR = 0;
+    //Reset counters
+    TIM3->CNT = 0;
+    TIM4->CNT = 0;
 
     if (prev_game != game)
     {
@@ -355,7 +385,7 @@ int main(void)
               TIM3->SR &= ~(0x0002); //clear flag after event
               //TIM4->SR = 0; //Clear all TIM4 flags
 
-              GPIOA->BSRR = (1 << 12); // LED ON while no player has pressed their button yet
+              if (winner == 0) GPIOA->BSRR = (1 << 12); // LED ON while no player has pressed their button yet
 
               if (prev_game != game) break;
             }
@@ -363,23 +393,25 @@ int main(void)
             //WINNER is determined by the interrupts, they will change the var winner to 1 or 2 respectively
             if (winner == 1)
             {
+              //GPIOA->BSRR = (1 << 12) << 16; //Turn off the LED after a win
               BSP_LCD_GLASS_Clear();
 
               diff = time_4ch2 - randn;
-
-              BSP_LCD_GLASS_DisplayString((uint8_t*) diff);
+              Bin2Ascii(diff, text); //Transforms the short data type to ascii
+              BSP_LCD_GLASS_DisplayString((uint8_t*) text);
 
               espera(2*sec); //wait so the player acknowledges their win
               winner = 0; //reset winner for future match
               playing = 0;
-              //reset timers? or do we reset at the start of each game?
             }
             else if (winner == 2) // We use an else if because we only want ONE winner
             {
+              //GPIOA->BSRR = (1 << 12) << 16;
               BSP_LCD_GLASS_Clear();
 
               diff = time_4ch1 - randn;
-              BSP_LCD_GLASS_DisplayString((uint8_t*) diff);
+              Bin2Ascii(diff, text);
+              BSP_LCD_GLASS_DisplayString((uint8_t*) text);
 
               espera(2*sec);
               winner = 0;
@@ -393,7 +425,7 @@ int main(void)
           {
             //TODO:COUNTDOWN GAME
             //users are displayed the countdown in real time from 10 in real time
-            //at a random time (a while before 0)
+            //at a random time (a while before 0 - use TIM3 with rand up to 10)
             //the countdown STOPS being displayed
             //the users have to attempt to press the button when the countdown reaches 0
 
@@ -402,10 +434,13 @@ int main(void)
             //Pressing after the countdown ends will result in displaying +XXXX time passed
             //The player to have the closest absolute value to 0, wins
 
-            //REVIEW BELOW
-            //Determine OVERTIME or UNDERTIME with TOC minus TIC
-            //undertime if TIM3 hasnt reached 0 so do operation (time_to_zero - input_time)
-
+            //TODO: Add to code for checkpoint 3
+            /**
+             *  ADC1->CR2 |= 0x00000001; // ADON = 1 (ADC powered on)
+                while ((ADC1->SR&0x0040)==0); // If ADCONS = 0, wait until converter is ready
+                ADC1->CR2 |= 0x40000000; // When ADCONS = 1, start conversion (SWSTART = 1)
+             */
+            
             BSP_LCD_GLASS_Clear();
             BSP_LCD_GLASS_DisplayString((uint8_t*)" GAME2");
             espera(2*sec);
@@ -417,6 +452,46 @@ int main(void)
             if (prev_game != game) break;
             BSP_LCD_GLASS_Clear();
             BSP_LCD_GLASS_DisplayString((uint8_t*)" GO");
+
+            //Start counters
+            TIM3->CR1 |= BIT_0;   //Set CEN = 1, Starts the counter
+            TIM3->EGR |= BIT_0;   //UG = 1 -> Generate an update event to update all registers
+            TIM3->SR = 0;         //clear counter flags
+            randn = random_num(0100, 9900); //rand num between 0.1 and 9.9 seconds
+            TIM3->CCR1 = randn;
+
+            TIM4->CR1 |= BIT_0;
+            TIM4->EGR |= BIT_0;
+            
+            if ((TIM3->SR &0x0002) != 0) /*Stop displaying digits*/;
+
+            //WINNER is determined by the interrupts, they will change the var winner to 1 or 2 respectively
+            if (winner == 1)
+            {
+              GPIOA->BSRR = (1 << 12); //Turn on LED1 to indicate P1 won
+              BSP_LCD_GLASS_Clear();
+
+              diff = time_4ch2 - randn;
+              Bin2Ascii(diff, text);
+              BSP_LCD_GLASS_DisplayString((uint8_t*) text);
+
+              espera(2*sec); //wait so the player acknowledges their win
+              winner = 0;
+              playing = 0;
+            }
+            else if (winner == 2) // We use an else if because we only want ONE winner
+            {
+              GPIOD->BSRR = (1 << 2); //Turn on LED2 to indicate P2 won
+              BSP_LCD_GLASS_Clear();
+
+              diff = time_4ch1 - randn;
+              Bin2Ascii(diff, text);
+              BSP_LCD_GLASS_DisplayString((uint8_t*) text);
+
+              espera(2*sec);
+              winner = 0;
+              playing = 0;
+            }
           }
         break;
 
@@ -432,7 +507,7 @@ int main(void)
         break;
       }
     }
-  HAL_Delay(50); //to avoid button bouncing
+  //HAL_Delay(50); //to avoid button bouncing
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -582,6 +657,51 @@ static void MX_LCD_Init(void)
   /* USER CODE BEGIN LCD_Init 2 */
 
   /* USER CODE END LCD_Init 2 */
+
+}
+
+/**
+  * @brief TIM2 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM2_Init(void)
+{
+
+  /* USER CODE BEGIN TIM2_Init 0 */
+
+  /* USER CODE END TIM2_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM2_Init 1 */
+
+  /* USER CODE END TIM2_Init 1 */
+  htim2.Instance = TIM2;
+  htim2.Init.Prescaler = 0;
+  htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim2.Init.Period = 65535;
+  htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim2, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM2_Init 2 */
+
+  /* USER CODE END TIM2_Init 2 */
 
 }
 
