@@ -69,6 +69,7 @@ unsigned int time_4ch2;
 
 unsigned short diff;
 uint8_t text[6]; //ASCII character array to output in the discovery LCD
+unsigned short countdown[10] = {10, 9, 8, 7, 6, 5, 4, 3, 2, 1};
 
 unsigned int randn;
 /* USER CODE END PV */
@@ -111,12 +112,14 @@ void EXTI9_5_IRQHandler(void) //ISR for EXTI7 & EXTI6
     {
       winner = 1;
       GPIOA->BSRR = (1 << 12) << 16;
+      playing = 0;
     }
     // BUTTON 2 is pressed, a rising edge is detected in PB6
     if (EXTI->PR &(1 << 6) && (playing == 1)) // 00000000001000000 in pending register
     {
       winner = 2;
       GPIOA->BSRR = (1 << 12) << 16;
+      playing = 0;
     }
   }
   //Always clear flags to avoid hanging
@@ -125,7 +128,7 @@ void EXTI9_5_IRQHandler(void) //ISR for EXTI7 & EXTI6
 }
 
 //TIMERS
-//TIC timer 4 ch1 and ch2
+//TIC timer 4 CH1 and CH2
 void TIM4_IRQHandler(void) //TIC
 {
   //checks if it has been activated if so makes it work
@@ -279,6 +282,13 @@ int main(void)
                         //OCyPE = 0 (no preload)
   TIM4->CCER = 0x0033;  //CCyP = 1 (falling edge)
                         //CCyE = 1 (input capture enabled)
+  /* TIM2 --------------------------------------------------------------------*/
+  //Assigned to PA5
+  //SET-UP for TIM2_CH1 - PWM
+  TIM2->CR1 = 0x0080; //(ARPE=1, CEN=0: timer not counting yet)
+  TIM2->CR2 = 0x0000;   //Always set to 0 in this course
+  TIM2->SMCR = 0x0000;  //Always set to 0 in this course
+  //ARR
 
   //ADC & Buzzer
   /* ADC_IN4 ------------------------------------------------------------------*/
@@ -308,7 +318,6 @@ int main(void)
   //PA12 (EXTERNAL LED1) - AF
   GPIOA->MODER &= ~(1 << (12*2 + 1));
   GPIOA->MODER |= (1 << (12*2));
-  //GPIOA->AFR[0] |= (0x02 << (12*4)); // Writes 0010 in AFRL12
   //Set up with pull-up resistor (01)
   GPIOA->PUPDR &= ~(1 << (12*2 + 1));
   GPIOA->PUPDR |= (1 << (12*2));
@@ -368,14 +377,13 @@ int main(void)
             //Waiting for users to input
             while (winner == 0)
             {
-              playing = 1;
               if (prev_game != game) break;
 
               //Start counters
               TIM3->CR1 |= BIT_0;   //Set CEN = 1, Starts the counter
               TIM3->EGR |= BIT_0;   //UG = 1 -> Generate an update event to update all registers
               TIM3->SR = 0;         //clear counter flags
-              randn = random_num(0, 4000); //Before 4 secs at any RANDOM time, LED1 ON
+              randn = random_num(0, 6000); //Before 6 secs at any RANDOM time, LED1 ON
               TIM3->CCR1 = randn;
 
               TIM4->CR1 |= BIT_0;
@@ -386,6 +394,7 @@ int main(void)
               //TIM4->SR = 0; //Clear all TIM4 flags
 
               if (winner == 0) GPIOA->BSRR = (1 << 12); // LED ON while no player has pressed their button yet
+              playing = 1;
 
               if (prev_game != game) break;
             }
@@ -457,13 +466,21 @@ int main(void)
             TIM3->CR1 |= BIT_0;   //Set CEN = 1, Starts the counter
             TIM3->EGR |= BIT_0;   //UG = 1 -> Generate an update event to update all registers
             TIM3->SR = 0;         //clear counter flags
-            randn = random_num(0100, 9900); //rand num between 0.1 and 9.9 seconds
+            randn = random_num(0, 10000); //rand num between 0 and 10 seconds
             TIM3->CCR1 = randn;
 
             TIM4->CR1 |= BIT_0;
             TIM4->EGR |= BIT_0;
             
-            if ((TIM3->SR &0x0002) != 0) /*Stop displaying digits*/;
+            while ((TIM3->SR &0x0002) == 0) /*Keep displaying digits*/
+            {
+              if (prev_game != game) break;
+              int time_left = 0;
+              int tot_time = 10;
+              time_left = tot_time - time_3; //time_3 in seconds
+              Bin2Ascii(time_left, text);
+              BSP_LCD_GLASS_DisplayString((uint8_t*) text);
+            }
 
             //WINNER is determined by the interrupts, they will change the var winner to 1 or 2 respectively
             if (winner == 1)
