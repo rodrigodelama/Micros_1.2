@@ -248,7 +248,7 @@ int main(void)
   //TIMERS
   /* TIM3 --------------------------------------------------------------------*/
   //No pin assignment, we just plainly use it for the TOC
-  //SET-UP for TIMs 3, CH3 & CH4 - TOCs, for random LED off and TBD
+  //SET-UP for TIM3 - TOC, for random LED off and TBD
   TIM3->CR1 = 0x0000;   // ON IN CODE BELOW
   TIM3->CR2 = 0x0000;   // Always set to 0
   TIM3->SMCR = 0x0000;  // Always set to 0
