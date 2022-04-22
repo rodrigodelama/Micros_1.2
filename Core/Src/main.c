@@ -18,6 +18,9 @@
   *                   Jaime Mato Rodriguez @Pekeniojimi
   *
   * @repo           : https://github.com/rodrigodelama/Micros_1.2
+  * 
+  * former repo with
+  * commit history  : https://github.com/rodrigodelama/LAB_1
   *
   ******************************************************************************
   */
@@ -27,7 +30,6 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include <stdlib.h>
 #include "stm32l152c_discovery.h"
 #include "stm32l152c_discovery_glass_lcd.h"
 #include "SDM_Utils.h"
@@ -136,7 +138,7 @@ void TIM4_IRQHandler(void) //TIC
   {
     //Code below - needed or not????
     //winner = 2; //CH1 is for PB6 - P2
-    time_4ch1 = TIM4->CCR1;
+    time_4ch1 = TIM4->CNT; //the time loaded to our var shall be the current count ?? //FIXME:
     if(time_4ch1 < 0) time_4ch1 += 0x0FFFF; //to avoid overflows
 
   }
@@ -144,7 +146,7 @@ void TIM4_IRQHandler(void) //TIC
   if((TIM4->SR &BIT_2) != 0) //0x4
   {
     //winner = 1; //CH2 is for PB7 - P1
-    time_4ch2 = TIM4->CCR2;
+    time_4ch2 = TIM4->CNT;
     if(time_4ch2 < 0) time_4ch2 += 0x0FFFF;
 
   }
@@ -255,6 +257,8 @@ int main(void)
   TIM3->PSC = 31999;    //Means fclk/(PSC+1)
   TIM3->CNT = 0;        //Initiallized to 0
   TIM3->ARR = 0xFFFF;   //USED IN PWN so set to max
+  //FIXME: Include here or down in game code ???
+  //TIM3->CCR1 = 1000;    //1sec = 1000 steps
   TIM3->DIER = 0x0000;  
   TIM3->CCMR1 = 0x0000; //CCyS = 0 (TOC)
                         //OCyM = 000 (no external output)
@@ -272,8 +276,11 @@ int main(void)
   TIM4->PSC = 31999; 
   TIM4->CNT = 0;     
   TIM4->ARR = 0xFFFF;   
+  //FIXME:
+  //TIM4->CCR1 = 1000; //1sec = 1000 steps
+  //TIM4->CCR2 = 1000;
   TIM4->DIER = 0X0006;  //IRQ activation for CH1 & 2
-  TIM4->CCMR1 = 0x0000; //
+  TIM4->CCMR1 = 0x0000;
                         //OCyM = 000 (no external output)
                         //OCyPE = 0 (no preload)
   TIM4->CCER = 0x0033;  //CCyP = 1 (falling edge)
@@ -284,7 +291,19 @@ int main(void)
   TIM2->CR1 = 0x0080; //(ARPE=1, CEN=0: timer not counting yet)
   TIM2->CR2 = 0x0000;   //Always set to 0 in this course
   TIM2->SMCR = 0x0000;  //Always set to 0 in this course
-  //ARR
+  //TIM2->ARR = X; //Value that when reached by CNT, resets CNT back to 0
+  TIM2->CCR1 = DC;
+  TIM2->DIER = 0X0000;
+  TIM2->CCMR1 = 0x6800; //0110 1000 0000 0000 meaning
+                        //bit15 OC1CE allways to 0
+                        //bit14-12 OC1M to 110 - PWM with the cycle starting at 1
+                        //bi11 OC1PE to 1 - the CCR1 value will be updated after an update event
+  TIM2->CCER = 0x0001;  //Enables the hardware output of TIM2_CH1
+  //TODO:
+  //Activate below in code when buzzer needs to function ??
+  //TIM2->CR1 |= 0x0001; //Timer on toggle
+  //TIM2->EGR |= 0x0001; //Update event
+  //TIM2->SR = 0; //Clear previous flags initially
 
   //ADC & Buzzer
   /* ADC_IN4 ------------------------------------------------------------------*/
@@ -334,28 +353,26 @@ int main(void)
     //Global Requirements
     //Display GAME 1 (initially) --> DONE IN GLOBAL VAR DECLARATION
     //If the USER BUTTON is pressed, change to GAME 2 (at ANY time) --> global if
-    //In GAME 1, wait predetermined time and start (use espera() function)
 
-    //Global IF condition, so we may immediately switch between games
-    //(a WHILE would force us to finish the code execution inside)
-
-    //INITIAL SETUP before each game run
+    //INITIAL SETUP before each game runs
     //All LEDs shall be initially off - when changing game modes, upon a restart of the main while loop
     GPIOA->BSRR = (1 << 12) << 16;
     GPIOD->BSRR = (1 << 2) << 16;
-    //Clear all timer flags to be used
-    TIM4->SR = 0;
-    TIM3->SR = 0;
     //Reset counters
     TIM3->CNT = 0;
     TIM4->CNT = 0;
+    //Clear all timer flags to be used
+    TIM4->SR = 0;
+    TIM3->SR = 0;
 
+    //The following global IF condition is used so we may immediately switch between games
+    //(a WHILE would force us to finish the nested code execution, then break outside)
     if (prev_game != game)
     {
       prev_game = game;
       switch(game)
       {
-        case 1: // GAME 1 - REACTION TIME
+        case 1: //GAME 1 - REACTION TIME
           while (game == 1)
           {
             BSP_LCD_GLASS_Clear(); //Clear LCD
@@ -378,31 +395,36 @@ int main(void)
               //Start counters
               TIM3->CR1 |= BIT_0;   //Set CEN = 1, Starts the counter
               TIM3->EGR |= BIT_0;   //UG = 1 -> Generate an update event to update all registers
-              TIM3->SR = 0;         //clear counter flags
+              TIM3->SR = 0;         //Clear counter flags
               randn = random_num(0, 6000); //Before 6 secs at any RANDOM time, LED1 ON
-              TIM3->CCR1 = randn;
+              TIM3->CCR1 = randn; //FIXME: what does this do exactly???
 
               TIM4->CR1 |= BIT_0;
               TIM4->EGR |= BIT_0;
+              TIM4->SR = 0;
 
-              while((TIM3->SR &0x0002) == 0); //loop until there is an event in timer
-              TIM3->SR &= ~(0x0002); //clear flag after event
+              while((TIM3->SR &0x0002) == 0); //loop until there is an event in timer (finishes counting up to randn)
+              TIM3->SR &= ~(0x0002); //Clear flag after event
               //TIM4->SR = 0; //Clear all TIM4 flags
 
               if (winner == 0) GPIOA->BSRR = (1 << 12); // LED ON while no player has pressed their button yet
-              playing = 1;
+              playing = 1; //We only want to accept the button presses after LED1 is lit
 
               if (prev_game != game) break;
             }
 
-            //WINNER is determined by the interrupts, they will change the var winner to 1 or 2 respectively
+            //WINNER is determined by interrupts, they will change the var winner to 1 or 2 respectively
             if (winner == 1)
             {
-              //GPIOA->BSRR = (1 << 12) << 16; //Turn off the LED after a win
               BSP_LCD_GLASS_Clear();
 
-              diff = time_4ch2 - randn;
-              Bin2Ascii(diff, text); //Transforms the short data type to ascii
+              diff = time_4ch2 - randn; //Subtracts randn to the time when the button was pressed to obtain the time delta
+              Bin2Ascii(diff, text); //Transforms the short data type to ASCII
+              //TODO: concatenate player number before time delta
+              //player Y
+              //reaction time XXXX
+              //format for display = YXXXX
+              //in this case = 1XXXX
               BSP_LCD_GLASS_DisplayString((uint8_t*) text);
 
               espera(2*sec); //wait so the player acknowledges their win
@@ -411,11 +433,11 @@ int main(void)
             }
             else if (winner == 2) // We use an else if because we only want ONE winner
             {
-              //GPIOA->BSRR = (1 << 12) << 16;
               BSP_LCD_GLASS_Clear();
 
               diff = time_4ch1 - randn;
               Bin2Ascii(diff, text);
+              //TODO: Correct winner LCD text output
               BSP_LCD_GLASS_DisplayString((uint8_t*) text);
 
               espera(2*sec);
@@ -425,26 +447,26 @@ int main(void)
           }
         break;
 
-        case 2: // GAME 2 - COUNTDOWN
+        case 2: //GAME 2 - COUNTDOWN
           while (game == 2)
           {
             //TODO:COUNTDOWN GAME
-            //users are displayed the countdown in real time from 10 in real time
-            //at a random time (a while before 0 - use TIM3 with rand up to 10)
-            //the countdown STOPS being displayed
-            //the users have to attempt to press the button when the countdown reaches 0
+            //Users are displayed a countdown in real time from 10 to 0
+            //At a random time (a while before 0 - use TIM3 with rand up to 10)
+            //the countdown will STOP being displayed
+            //The players have to attempt to press the button when the countdown reaches 0
 
-            //The player with the closest time to 0 will win
+            //The player with the closest time delta to 0 will win, and their LED will light up
             //Pressing before the countdown ends will result in displaying -XXXX time left
             //Pressing after the countdown ends will result in displaying +XXXX time passed
             //The player to have the closest absolute value to 0, wins
 
-            //TODO: Add to code for checkpoint 3
+            //FIXME: Add to code for checkpoint 3
             /**
             ADC1->CR2 |= 0x00000001; // ADON = 1 (ADC powered on)
             while ((ADC1->SR&0x0040)==0); // If ADCONS = 0, wait until converter is ready
             ADC1->CR2 |= 0x40000000; // When ADCONS = 1, start conversion (SWSTART = 1)
-             */
+            */
             
             BSP_LCD_GLASS_Clear();
             BSP_LCD_GLASS_DisplayString((uint8_t*)" GAME2");
@@ -467,14 +489,15 @@ int main(void)
 
             TIM4->CR1 |= BIT_0;
             TIM4->EGR |= BIT_0;
-            int time_left = 0;
-            int tot_time = 10000;
+            //int time_left = 0;
+            //int tot_time = 10000;
             
             while ((TIM3->SR &0x0002) == 0) /*Keep displaying digits*/
             {
               if (prev_game != game) break;
               time_3 = TIM4->CCR2;
-              time_left = tot_time - time_3; //time_3 in seconds
+              //time_left = tot_time - time_3; //time_3 in seconds
+              //FIXME: the sum above does nothing
               Bin2Ascii(time_3, text);
               BSP_LCD_GLASS_DisplayString((uint8_t*) text);
             }
@@ -485,6 +508,8 @@ int main(void)
               GPIOA->BSRR = (1 << 12); //Turn on LED1 to indicate P1 won
               BSP_LCD_GLASS_Clear();
 
+              //Pressing before the countdown ends will result in displaying -XXXX time left
+              //Pressing after the countdown ends will result in displaying +XXXX time passed
               diff = time_4ch2 - randn;
               Bin2Ascii(diff, text);
               BSP_LCD_GLASS_DisplayString((uint8_t*) text);
@@ -521,7 +546,7 @@ int main(void)
         break;
       }
     }
-  //HAL_Delay(50); //to avoid button bouncing
+  HAL_Delay(50); //To avoid 'bouncing' in the button presses
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */

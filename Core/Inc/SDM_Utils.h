@@ -33,6 +33,8 @@
 #define BIT_30 0x40000000
 #define BIT_31 0x80000000
 
+#include <stdlib.h>
+
 void espera(int time);
 void Bin2Ascii(unsigned short number, unsigned char* chain);
 int random_num(int lower_limit, int upper_limit);
