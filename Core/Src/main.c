@@ -110,7 +110,7 @@ void EXTI9_5_IRQHandler(void) //ISR for EXTI7 & EXTI6
     // BUTTON 1 is pressed, a rising edge is detected in PB7
     if (EXTI->PR &(1 << 7) && (playing == 1)) // 00000000010000000 in pending register of ISER[0]
     {
-      GPIOA->BSRR = (1 << 12) << 16;''
+      GPIOA->BSRR = (1 << 12) << 16;
       playing = 0;
       winner = 1;
     }
@@ -467,14 +467,15 @@ int main(void)
 
             TIM4->CR1 |= BIT_0;
             TIM4->EGR |= BIT_0;
+            int time_left = 0;
+            int tot_time = 10000;
             
             while ((TIM3->SR &0x0002) == 0) /*Keep displaying digits*/
             {
               if (prev_game != game) break;
-              int time_left = 0;
-              int tot_time = 10;
+              time_3 = TIM4->CCR2;
               time_left = tot_time - time_3; //time_3 in seconds
-              Bin2Ascii(time_left, text);
+              Bin2Ascii(time_3, text);
               BSP_LCD_GLASS_DisplayString((uint8_t*) text);
             }
 
