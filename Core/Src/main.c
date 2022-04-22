@@ -70,10 +70,12 @@ unsigned int time_4ch1;
 unsigned int time_4ch2;
 
 unsigned short diff;
+unsigned int randn;
+
 uint8_t text[6]; //ASCII character array to output in the discovery LCD
 unsigned short countdown[10] = {10, 9, 8, 7, 6, 5, 4, 3, 2, 1};
 
-unsigned int randn;
+short duty_cycle = 1;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -292,7 +294,7 @@ int main(void)
   TIM2->CR2 = 0x0000;   //Always set to 0 in this course
   TIM2->SMCR = 0x0000;  //Always set to 0 in this course
   //TIM2->ARR = X; //Value that when reached by CNT, resets CNT back to 0
-  TIM2->CCR1 = DC;
+  TIM2->CCR1 = duty_cycle;
   TIM2->DIER = 0X0000;
   TIM2->CCMR1 = 0x6800; //0110 1000 0000 0000 meaning
                         //bit15 OC1CE allways to 0
