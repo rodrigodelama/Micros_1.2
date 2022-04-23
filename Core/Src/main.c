@@ -74,7 +74,7 @@ unsigned short diff;
 unsigned int randn;
 
 unsigned int countdown;
-#define end_of_count = 10000
+unsigned int end_of_count = 10000;
 
 uint8_t text[6]; //ASCII character array to output in the Discovery LCD
 
@@ -560,7 +560,7 @@ int main(void)
                 if (time_4ch1 == 0) //If only P2 pressed, they win
                 {
                   winner = 1;
-                  break;
+                  break; //break out of while loop
                 }
                 else if (time_4ch2 == 0) //If only P1 pressed, they win
                 {
@@ -578,18 +578,25 @@ int main(void)
             {
               if ((time_4ch1 == 0) && (time_4ch2 == 0)); //no one played - discard
               else
-              BSP_LCD_GLASS_DisplayString((uint8_t*) " TIE");
+              BSP_LCD_GLASS_DisplayString((uint8_t*) "  TIE");
               espera(2*sec);
             }
             else if((time_4ch1 == 0) || (time_4ch2 == 0))
             {
               //if one of them is 0, with the code above, the only player to press automatically wins
             }
-            else if(abs(time_4ch1) > abs(time_4ch2))
+            /**
+             * if (abs(time_4ch1 - end_of_count) <= abs(time_4ch2 - end_of_count))
+             * {
+             *    // a is the closest
+             * }
+             * https://stackovergo.com/es/q/2093296/how-to-find-which-value-is-closest-to-a-number-in-c
+             */
+            else if(abs(time_4ch1 - end_of_count) > abs(time_4ch2 - end_of_count))
             {
               winner = 1;
             }
-            else if(abs(time_4ch2) > abs(time_4ch1))
+            else if(abs(time_4ch2 - end_of_count) > abs(time_4ch1 - end_of_count))
             {
               winner = 2;
             }
