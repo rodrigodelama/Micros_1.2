@@ -152,18 +152,15 @@ void EXTI9_5_IRQHandler(void) //ISR for EXTI7 & EXTI6
 //TIC timer 4 CH1 and CH2
 void TIM4_IRQHandler(void) //TIC
 {
-  //CH1
+  //CH1 for PB6 - Player 2
   if((TIM4->SR &BIT_1) != 0) //0x2
   {
-    //Code below - needed or not????
-    //winner = 2; //CH1 is for PB6 - P2
-    time_4ch1 = TIM4->CCR1; //the time loaded to our var shall be the current count when clicked
+    time_4ch1 = TIM4->CCR1; //The time loaded to our var shall be the count when the button was clicked
     if(time_4ch1 < 0) time_4ch1 += 0x0FFFF; //to avoid overflows
   }
-  //CH2
+  //CH2 for PB7 - Player 1
   if((TIM4->SR &BIT_2) != 0) //0x4
   {
-    //winner = 1; //CH2 is for PB7 - P1
     time_4ch2 = TIM4->CCR2;
     if(time_4ch2 < 0) time_4ch2 += 0x0FFFF;
   }
@@ -231,7 +228,7 @@ int main(void)
   //Set PB7 to 10 for Alternate Functions (AFs)
   GPIOB->MODER |= (1 << (7*2 + 1));
   GPIOB->MODER &= ~(1 << (7*2));
-  //AF for TIM4_CH2
+  //AF for TIM4_CH2 (AF2)
   GPIOB->AFR[0] |= (0x02 << (7*4)); // Writes 0010 in AFRL7 associating TIM4 to PB7
   //WE NEED INTERNAL RESISTORS - pull-up OR pull-down ?
   //We chose pull-up: a constant 1 unless we press, then its shorted to GND
@@ -251,7 +248,7 @@ int main(void)
   //Set PB6 to 10 for AFs
   GPIOB->MODER |= (1 << (6*2 + 1));
   GPIOB->MODER &= ~(1 << (6*2));
-  //AF for TIM4_CH1
+  //AF for TIM4_CH1 (AF2)
   GPIOB->AFR[0] |= (0x02 << (6*4)); // Writes 0010 in AFRL6 associating TIM4 to PB6
   //Set up with pull-up resistor (01)
   GPIOB->PUPDR &= ~(1 << (6*2 + 1));
@@ -274,8 +271,6 @@ int main(void)
   TIM3->PSC = 31999;    //Means fclk/(PSC+1)
   TIM3->CNT = 0;        //Initiallized to 0
   TIM3->ARR = 0xFFFF;   //USED IN PWN so set to max
-  //FIXME: Include here or down in game code ???
-  //TIM3->CCR1 = 1000;    //1sec = 1000 steps
   TIM3->DIER = 0x0000;  
   TIM3->CCMR1 = 0x0000; //CCyS = 0 (TOC)
                         //OCyM = 000 (no external output)
@@ -314,7 +309,7 @@ int main(void)
   TIM2->CCR1 = duty_cycle;
   TIM2->DIER = 0X0000;
   TIM2->CCMR1 = 0x6800; //0110 1000 0000 0000 meaning
-                        //bit15 OC1CE allways to 0
+                        //bit15 OC1CE always to 0
                         //bit14-12 OC1M to 110 - PWM with the cycle starting at 1
                         //bi11 OC1PE to 1 - the CCR1 value will be updated after an update event
   TIM2->CCER = 0x0001;  //Enables the hardware output of TIM2_CH1

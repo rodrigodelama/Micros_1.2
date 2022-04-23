@@ -37,11 +37,11 @@ Idx Name          Size      VMA       LMA       File off  Algn
                   CONTENTS, READONLY, DEBUGGING, OCTETS
  16 .debug_macro  0001649b  00000000  00000000  0002e298  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 17 .debug_line   0000c9d6  00000000  00000000  00044733  2**0
+ 17 .debug_line   0000c9d5  00000000  00000000  00044733  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 18 .debug_str    00088d93  00000000  00000000  00051109  2**0
+ 18 .debug_str    00088d93  00000000  00000000  00051108  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 19 .comment      00000050  00000000  00000000  000d9e9c  2**0
+ 19 .comment      00000050  00000000  00000000  000d9e9b  2**0
                   CONTENTS, READONLY
  20 .debug_frame  000037b8  00000000  00000000  000d9eec  2**2
                   CONTENTS, READONLY, DEBUGGING, OCTETS
@@ -601,7 +601,6 @@ void EXTI9_5_IRQHandler(void) //ISR for EXTI7 & EXTI6
  8000600:	4b1e      	ldr	r3, [pc, #120]	; (800067c <EXTI9_5_IRQHandler+0xdc>)
  8000602:	2201      	movs	r2, #1
  8000604:	601a      	str	r2, [r3, #0]
-        //time_4ch2 = TIM4->CNT;
       }
       //else nothing
     }
@@ -684,7 +683,7 @@ void TIM4_IRQHandler(void) //TIC
 {
  8000680:	b480      	push	{r7}
  8000682:	af00      	add	r7, sp, #0
-  //CH1
+  //CH1 for PB6 - Player 2
   if((TIM4->SR &BIT_1) != 0) //0x2
  8000684:	4b0d      	ldr	r3, [pc, #52]	; (80006bc <TIM4_IRQHandler+0x3c>)
  8000686:	691b      	ldr	r3, [r3, #16]
@@ -692,16 +691,14 @@ void TIM4_IRQHandler(void) //TIC
  800068c:	2b00      	cmp	r3, #0
  800068e:	d003      	beq.n	8000698 <TIM4_IRQHandler+0x18>
   {
-    //Code below - needed or not????
-    //winner = 2; //CH1 is for PB6 - P2
-    time_4ch1 = TIM4->CCR1; //the time loaded to our var shall be the current count when clicked
+    time_4ch1 = TIM4->CCR1; //The time loaded to our var shall be the count when the button was clicked
  8000690:	4b0a      	ldr	r3, [pc, #40]	; (80006bc <TIM4_IRQHandler+0x3c>)
  8000692:	6b5b      	ldr	r3, [r3, #52]	; 0x34
  8000694:	4a0a      	ldr	r2, [pc, #40]	; (80006c0 <TIM4_IRQHandler+0x40>)
  8000696:	6013      	str	r3, [r2, #0]
     if(time_4ch1 < 0) time_4ch1 += 0x0FFFF; //to avoid overflows
   }
-  //CH2
+  //CH2 for PB7 - Player 1
   if((TIM4->SR &BIT_2) != 0) //0x4
  8000698:	4b08      	ldr	r3, [pc, #32]	; (80006bc <TIM4_IRQHandler+0x3c>)
  800069a:	691b      	ldr	r3, [r3, #16]
@@ -709,7 +706,6 @@ void TIM4_IRQHandler(void) //TIC
  80006a0:	2b00      	cmp	r3, #0
  80006a2:	d003      	beq.n	80006ac <TIM4_IRQHandler+0x2c>
   {
-    //winner = 1; //CH2 is for PB7 - P1
     time_4ch2 = TIM4->CCR2;
  80006a4:	4b05      	ldr	r3, [pc, #20]	; (80006bc <TIM4_IRQHandler+0x3c>)
  80006a6:	6b9b      	ldr	r3, [r3, #56]	; 0x38
@@ -846,7 +842,7 @@ int main(void)
  800075c:	4a8a      	ldr	r2, [pc, #552]	; (8000988 <main+0x2c0>)
  800075e:	f423 4380 	bic.w	r3, r3, #16384	; 0x4000
  8000762:	6013      	str	r3, [r2, #0]
-  //AF for TIM4_CH2
+  //AF for TIM4_CH2 (AF2)
   GPIOB->AFR[0] |= (0x02 << (7*4)); // Writes 0010 in AFRL7 associating TIM4 to PB7
  8000764:	4b88      	ldr	r3, [pc, #544]	; (8000988 <main+0x2c0>)
  8000766:	6a1b      	ldr	r3, [r3, #32]
@@ -916,7 +912,7 @@ int main(void)
  80007d4:	4a6c      	ldr	r2, [pc, #432]	; (8000988 <main+0x2c0>)
  80007d6:	f423 5380 	bic.w	r3, r3, #4096	; 0x1000
  80007da:	6013      	str	r3, [r2, #0]
-  //AF for TIM4_CH1
+  //AF for TIM4_CH1 (AF2)
   GPIOB->AFR[0] |= (0x02 << (6*4)); // Writes 0010 in AFRL6 associating TIM4 to PB6
  80007dc:	4b6a      	ldr	r3, [pc, #424]	; (8000988 <main+0x2c0>)
  80007de:	6a1b      	ldr	r3, [r3, #32]
@@ -997,8 +993,6 @@ int main(void)
  800085c:	4b4b      	ldr	r3, [pc, #300]	; (800098c <main+0x2c4>)
  800085e:	f64f 72ff 	movw	r2, #65535	; 0xffff
  8000862:	62da      	str	r2, [r3, #44]	; 0x2c
-  //FIXME: Include here or down in game code ???
-  //TIM3->CCR1 = 1000;    //1sec = 1000 steps
   TIM3->DIER = 0x0000;  
  8000864:	4b49      	ldr	r3, [pc, #292]	; (800098c <main+0x2c4>)
  8000866:	2200      	movs	r2, #0
@@ -1031,21 +1025,18 @@ int main(void)
  8000882:	4b43      	ldr	r3, [pc, #268]	; (8000990 <main+0x2c8>)
  8000884:	2200      	movs	r2, #0
  8000886:	609a      	str	r2, [r3, #8]
-  TIM4->PSC = 31999; 
+  TIM4->PSC = 31999;
  8000888:	4b41      	ldr	r3, [pc, #260]	; (8000990 <main+0x2c8>)
  800088a:	f647 42ff 	movw	r2, #31999	; 0x7cff
  800088e:	629a      	str	r2, [r3, #40]	; 0x28
-  TIM4->CNT = 0;     
+  TIM4->CNT = 0;
  8000890:	4b3f      	ldr	r3, [pc, #252]	; (8000990 <main+0x2c8>)
  8000892:	2200      	movs	r2, #0
  8000894:	625a      	str	r2, [r3, #36]	; 0x24
-  TIM4->ARR = 0xFFFF;   
+  TIM4->ARR = 0xFFFF;
  8000896:	4b3e      	ldr	r3, [pc, #248]	; (8000990 <main+0x2c8>)
  8000898:	f64f 72ff 	movw	r2, #65535	; 0xffff
  800089c:	62da      	str	r2, [r3, #44]	; 0x2c
-  //FIXME:
-  //TIM4->CCR1 = 1000; //1sec = 1000 steps
-  //TIM4->CCR2 = 1000;
   TIM4->DIER = 0X0006;  //IRQ activation for CH1 & 2
  800089e:	4b3c      	ldr	r3, [pc, #240]	; (8000990 <main+0x2c8>)
  80008a0:	2206      	movs	r2, #6
@@ -1054,17 +1045,16 @@ int main(void)
  80008a4:	4b3a      	ldr	r3, [pc, #232]	; (8000990 <main+0x2c8>)
  80008a6:	f240 1201 	movw	r2, #257	; 0x101
  80008aa:	619a      	str	r2, [r3, #24]
+                        //CCyS = 01 (TIC)
                         //OCyCE = 0
                         //OCyM = 000 (no external output)
                         //OCyPE = 0 (no preload)
                         //OCyFE = 0
-
   TIM4->CCER = 0x0033;  //CCyP = 01 (falling edge)
  80008ac:	4b38      	ldr	r3, [pc, #224]	; (8000990 <main+0x2c8>)
  80008ae:	2233      	movs	r2, #51	; 0x33
  80008b0:	621a      	str	r2, [r3, #32]
                         //CCyE = 1 (input capture enabled)
-  //FIXME: needed??
   NVIC->ISER[0] |= (1 << 30); //Enables IRQ source for TIM4 in NVIC (pos 30)
  80008b2:	4b34      	ldr	r3, [pc, #208]	; (8000984 <main+0x2bc>)
  80008b4:	681b      	ldr	r3, [r3, #0]
@@ -1101,7 +1091,7 @@ int main(void)
  80008ea:	f04f 4380 	mov.w	r3, #1073741824	; 0x40000000
  80008ee:	f44f 42d0 	mov.w	r2, #26624	; 0x6800
  80008f2:	619a      	str	r2, [r3, #24]
-                        //bit15 OC1CE allways to 0
+                        //bit15 OC1CE always to 0
                         //bit14-12 OC1M to 110 - PWM with the cycle starting at 1
                         //bi11 OC1PE to 1 - the CCR1 value will be updated after an update event
   TIM2->CCER = 0x0001;  //Enables the hardware output of TIM2_CH1
@@ -1366,7 +1356,7 @@ int main(void)
  8000aa2:	4b4a      	ldr	r3, [pc, #296]	; (8000bcc <main+0x504>)
  8000aa4:	2200      	movs	r2, #0
  8000aa6:	611a      	str	r2, [r3, #16]
-              randn = random_num(0, 4000); //Before 4 secs at any RANDOM time, LED1 ON
+              randn = random_num(0, 4000); //Before 4 secs, at any RANDOM time LED1 will turn ON
  8000aa8:	f44f 617a 	mov.w	r1, #4000	; 0xfa0
  8000aac:	2000      	movs	r0, #0
  8000aae:	f7ff fd3b 	bl	8000528 <random_num>
@@ -1374,7 +1364,7 @@ int main(void)
  8000ab4:	461a      	mov	r2, r3
  8000ab6:	4b4d      	ldr	r3, [pc, #308]	; (8000bec <main+0x524>)
  8000ab8:	601a      	str	r2, [r3, #0]
-              TIM3->CCR1 = randn; //TIM3 sets a flag when it reaches randn
+              TIM3->CCR1 = randn; //TIM3 will set a flag when it reaches randn
  8000aba:	4a44      	ldr	r2, [pc, #272]	; (8000bcc <main+0x504>)
  8000abc:	4b4b      	ldr	r3, [pc, #300]	; (8000bec <main+0x524>)
  8000abe:	681b      	ldr	r3, [r3, #0]
@@ -1393,8 +1383,8 @@ int main(void)
  8000ad4:	4a3d      	ldr	r2, [pc, #244]	; (8000bcc <main+0x504>)
  8000ad6:	f023 0302 	bic.w	r3, r3, #2
  8000ada:	6113      	str	r3, [r2, #16]
-              //TIM4->SR = 0; //Clear all TIM4 flags
 
+              //Start counting the time delta to a player pressing their button as LED1 lights up
               TIM4->CR1 |= BIT_0;
  8000adc:	4b3c      	ldr	r3, [pc, #240]	; (8000bd0 <main+0x508>)
  8000ade:	681b      	ldr	r3, [r3, #0]
@@ -1455,8 +1445,10 @@ int main(void)
               BSP_LCD_GLASS_Clear();
  8000b34:	f001 f838 	bl	8001ba8 <BSP_LCD_GLASS_Clear>
 
-              //diff = time_4ch2 - randn; //Subtracts randn to the time when the button was pressed to obtain the time delta
-              time_4ch2 += 10000;
+              //Concatenates the player number before reaction time
+              //player Y; reaction time XXXXX
+              //format for display = YXXXXX
+              time_4ch2 += 10000; //In this case = 1XXXXX
  8000b38:	4b2f      	ldr	r3, [pc, #188]	; (8000bf8 <main+0x530>)
  8000b3a:	681b      	ldr	r3, [r3, #0]
  8000b3c:	f503 531c 	add.w	r3, r3, #9984	; 0x2700
@@ -1470,11 +1462,6 @@ int main(void)
  8000b4c:	492b      	ldr	r1, [pc, #172]	; (8000bfc <main+0x534>)
  8000b4e:	4618      	mov	r0, r3
  8000b50:	f7ff fcac 	bl	80004ac <Bin2Ascii>
-              //TODO: concatenate player number before time delta
-              //player Y
-              //reaction time XXXX
-              //format for display = YXXXX
-              //in this case = 1XXXX
               BSP_LCD_GLASS_DisplayString((uint8_t*) text);
  8000b54:	4829      	ldr	r0, [pc, #164]	; (8000bfc <main+0x534>)
  8000b56:	f000 fffd 	bl	8001b54 <BSP_LCD_GLASS_DisplayString>
@@ -1501,7 +1488,7 @@ int main(void)
               BSP_LCD_GLASS_Clear();
  8000b76:	f001 f817 	bl	8001ba8 <BSP_LCD_GLASS_Clear>
 
-              //diff = time_4ch1 - randn;
+              //Concatenates the player number before reaction time
               time_4ch1 += 20000;
  8000b7a:	4b22      	ldr	r3, [pc, #136]	; (8000c04 <main+0x53c>)
  8000b7c:	681b      	ldr	r3, [r3, #0]
@@ -1516,7 +1503,6 @@ int main(void)
  8000b8e:	491b      	ldr	r1, [pc, #108]	; (8000bfc <main+0x534>)
  8000b90:	4618      	mov	r0, r3
  8000b92:	f7ff fc8b 	bl	80004ac <Bin2Ascii>
-              //TODO: Correct winner LCD text output
               BSP_LCD_GLASS_DisplayString((uint8_t*) text);
  8000b96:	4819      	ldr	r0, [pc, #100]	; (8000bfc <main+0x534>)
  8000b98:	f000 ffdc 	bl	8001b54 <BSP_LCD_GLASS_DisplayString>
@@ -1673,7 +1659,7 @@ int main(void)
  8000cb6:	4859      	ldr	r0, [pc, #356]	; (8000e1c <main+0x754>)
  8000cb8:	f000 ff4c 	bl	8001b54 <BSP_LCD_GLASS_DisplayString>
 
-                if ((TIM3->SR &0x0002) != 0) BSP_LCD_GLASS_Clear(); //Clear LCD when randn is reached
+                if ((TIM3->SR &0x0002) != 0) BSP_LCD_GLASS_Clear(); //Clear LCD when randn is reached by TIM3
  8000cbc:	4b53      	ldr	r3, [pc, #332]	; (8000e0c <main+0x744>)
  8000cbe:	691b      	ldr	r3, [r3, #16]
  8000cc0:	f003 0302 	and.w	r3, r3, #2
@@ -1726,7 +1712,7 @@ int main(void)
             {
 
             }
-*/
+            */
             if (winner == 1)
  8000d10:	4b44      	ldr	r3, [pc, #272]	; (8000e24 <main+0x75c>)
  8000d12:	681b      	ldr	r3, [r3, #0]
