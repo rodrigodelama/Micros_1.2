@@ -74,6 +74,7 @@ unsigned short diff;
 unsigned int randn;
 
 unsigned int countdown;
+#define end_of_count = 10000
 
 uint8_t text[6]; //ASCII character array to output in the Discovery LCD
 
@@ -277,7 +278,7 @@ int main(void)
   TIM3->CNT = 0;        //Initiallized to 0
   TIM3->ARR = 0xFFFF;   //USED IN PWN so set to max
   TIM3->DIER = 0x0000;  
-  TIM3->CCMR1 = 0x0000; //CCyS = 0 (TOC)
+  TIM3->CCMR1 = 0x0000; //CCyS = 00 (TOC)
                         //OCyM = 000 (no external output)
                         //OCyPE = 0 (no preload)
   TIM3->CCER = 0x0000;  //CCyP = 0 (always in TOC)
@@ -495,6 +496,12 @@ int main(void)
             espera(2*sec);
             if (prev_game != game) break;
 
+            //Initial conditions reset
+            winner = 0;
+            btn_pressed = 0;
+            time_4ch1 = 0;
+            time_4ch2 = 0;
+
             //Start counters
             TIM3->CR1 |= BIT_0;   //Set CEN = 1, Starts the counter
             TIM3->EGR |= BIT_0;   //UG = 1 -> Generate an update event to update all registers
@@ -510,10 +517,14 @@ int main(void)
             {
               while ((TIM3->SR &0x0002) == 0) /*Keep displaying digits while CNT is not reached*/
               {
-                //TODO: Make the LCD only display whole numbers (10, 9, 8, etc)
                 time_3 = TIM3->CNT;
                 countdown = 10000 - time_3;
-                // if number is whole 10000, divide by 1000 and display
+
+                //TODO: checkpoint 3 do a switch and find the other multiples for 0.5s and 2s
+
+                //To display only whole numbers (1sec increments) if the
+                //number is a multiple of 10000, divide it by 1000 and display
+                //In this case the LCD only display whole numbers (10, 9, 8, etc)
                 if(countdown%1000 == 0)
                 {
                   countdown /= 1000;
@@ -523,10 +534,13 @@ int main(void)
 
                 if (prev_game != game) break;
               }
-              if ((TIM3->SR &0x0002) != 0) BSP_LCD_GLASS_Clear(); //Clear LCD when randn is reached by TIM3
+              if ((TIM3->SR &0x0002) != 0)
+              {
+                BSP_LCD_GLASS_Clear(); //Clear LCD when randn is reached by TIM3
+                //We will wait here for up to 3secs after the count passes 10secs while no winner is defined
+                if (TIM3->CNT > 13000) break; //if nobody presses any button after 13s the game resets
+              }
 
-              //We will wait here for up to 3secs after the count passes 10secs while no winner is defined
-              if (TIM3->CNT > 13000) break; //if nobody presses any button after 13s the game resets
               if (prev_game != game) break;
             }
             TIM3->SR &= ~(0x0002); //Clear flag after any button press
@@ -535,13 +549,32 @@ int main(void)
             //when 1st player clicks save their time to a var
             //wait for the second player to click and save to var2
             //compare vars, smallest absolute value wins
-            /*
-            //TODO: Implement the wait for both players to press
+
+            //If the game was engaged with, wait for the other player to attempt their press
+
             while ((time_4ch1 == 0) || (time_4ch2 == 0))
             {
-
+              if((time_4ch1 == 0)&& (time_4ch2 == 0)) break;
+              //Grace period of 3secs from countdown reaching 0, if not automatically the only player to click will win
+              if (TIM3->CNT > 13000)
+              {
+                if(time_4ch1 == 0) winner = 1;
+                else if (time_4ch2 == 0) winner = 2;
+                else break;
+              }
             }
-            */
+
+            if(abs(time_4ch1) > abs(time_4ch2))
+            {
+              winner = 1;
+            } else if(abs(time_4ch2) > abs(time_4ch1)) {
+              winner = 2;
+            } else { //They are equally close to zero.
+              BSP_LCD_GLASS_DisplayString((uint8_t*) " TIE"); //unlikely but still a possibility
+              espera(3*sec);
+              break;
+            }
+
             if (winner == 1)
             {
               GPIOA->BSRR = (1 << 12); //Turn on LED1 to indicate P1 won
@@ -559,8 +592,6 @@ int main(void)
 
               espera(3*sec); //wait so the player acknowledges their win
               GPIOA->BSRR = (1 << 12) << 16; //Turn off winners LED after win
-              winner = 0;
-              btn_pressed = 0;
             }
             else if (winner == 2)
             {
@@ -572,8 +603,6 @@ int main(void)
 
               espera(3*sec);
               GPIOD->BSRR = (1 << 2) << 16;
-              winner = 0;
-              btn_pressed = 0;
             }
           }
         break;
