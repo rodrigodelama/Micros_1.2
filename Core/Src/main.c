@@ -70,11 +70,11 @@ unsigned int time_3 = 0;
 unsigned int time_4ch1 = 0;
 unsigned int time_4ch2 = 0;
 
-unsigned short diff;
+unsigned short delta;
 unsigned int randn;
 
 unsigned int countdown;
-unsigned int end_of_count = 10000;
+unsigned int ten_thousand = 10000;
 
 uint8_t text[6]; //ASCII character array to output in the Discovery LCD
 
@@ -585,18 +585,11 @@ int main(void)
             {
               //if one of them is 0, with the code above, the only player to press automatically wins
             }
-            /**
-             * if (abs(time_4ch1 - end_of_count) <= abs(time_4ch2 - end_of_count))
-             * {
-             *    // a is the closest
-             * }
-             * https://stackovergo.com/es/q/2093296/how-to-find-which-value-is-closest-to-a-number-in-c
-             */
-            else if(abs(time_4ch1 - end_of_count) > abs(time_4ch2 - end_of_count))
+            else if(abs(time_4ch1 - ten_thousand) > abs(time_4ch2 - ten_thousand))
             {
               winner = 1;
             }
-            else if(abs(time_4ch2 - end_of_count) > abs(time_4ch1 - end_of_count))
+            else if(abs(time_4ch2 - ten_thousand) > abs(time_4ch1 - ten_thousand))
             {
               winner = 2;
             }
@@ -608,11 +601,11 @@ int main(void)
               //Pressing before the countdown ends will result in displaying -XXXX time left
               //Pressing after the countdown ends will result in displaying +XXXX time passed
 
-              //do the diff between randn and tim4->cnt
+              //do the delta between randn and tim4->cnt
               //if (TIM4->CNT < rand)
 
-              diff = time_4ch2 - randn;
-              Bin2Ascii(diff, text);
+              delta = time_4ch2 - randn;
+              Bin2Ascii(delta, text);
               BSP_LCD_GLASS_DisplayString((uint8_t*) text);
 
               espera(3*sec); //wait so the player acknowledges their win
@@ -622,8 +615,8 @@ int main(void)
             {
               GPIOD->BSRR = (1 << 2); //Turn on LED2 to indicate P2 won
 
-              diff = time_4ch1 - randn;
-              Bin2Ascii(diff, text);
+              delta = time_4ch1 - randn;
+              Bin2Ascii(delta, text);
               BSP_LCD_GLASS_DisplayString((uint8_t*) text);
 
               espera(3*sec);
