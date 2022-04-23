@@ -494,8 +494,8 @@ int main(void)
             //int time_left = 0;
             //int tot_time = 10000;
             
-            //playing = 1;
-            while ((winner == 0) /*&& (playing == 1)*/)
+            playing = 1; //We need playing to = 1, if not the button interrupts wont work
+            while ((winner == 0) && (playing == 1))
             {
               while ((TIM3->SR &0x0002) == 0) /*Keep displaying digits while CNT is not reached*/
               {
@@ -505,6 +505,7 @@ int main(void)
                 Bin2Ascii(time_3, text);
                 BSP_LCD_GLASS_DisplayString((uint8_t*) text);
 
+                if ((TIM3->SR &0x0002) != 0) BSP_LCD_GLASS_Clear();
                 if (prev_game != game) break;
               }
               //We will wait here while no winner is defined
@@ -515,7 +516,7 @@ int main(void)
             if (winner == 1)
             {
               GPIOA->BSRR = (1 << 12); //Turn on LED1 to indicate P1 won
-              BSP_LCD_GLASS_Clear();
+              //BSP_LCD_GLASS_Clear(); //Not needed in game2, the display will be cleared after the rand count ends
 
               //Pressing before the countdown ends will result in displaying -XXXX time left
               //Pressing after the countdown ends will result in displaying +XXXX time passed
@@ -528,19 +529,20 @@ int main(void)
               BSP_LCD_GLASS_DisplayString((uint8_t*) text);
 
               espera(2*sec); //wait so the player acknowledges their win
+              GPIOA->BSRR = (1 << 12) << 16; //Turn off winners LED after win
               winner = 0;
               playing = 0;
             }
-            else if (winner == 2) // We use an else if because we only want ONE winner
+            else if (winner == 2)
             {
               GPIOD->BSRR = (1 << 2); //Turn on LED2 to indicate P2 won
-              BSP_LCD_GLASS_Clear();
 
               diff = time_4ch1 - randn;
               Bin2Ascii(diff, text);
               BSP_LCD_GLASS_DisplayString((uint8_t*) text);
 
               espera(2*sec);
+              GPIOD->BSRR = (1 << 2) << 16;
               winner = 0;
               playing = 0;
             }
