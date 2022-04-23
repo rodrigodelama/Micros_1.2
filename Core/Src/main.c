@@ -64,10 +64,11 @@ unsigned int prev_game = 0;
 unsigned int game = 1; //GAME1 is the starting point
 unsigned int winner = 0; //Initialised to 0, if it never changes, it will generate an error
 unsigned int playing = 0; //Maintains the button interrupts disabled unless we are awaiting
+unsigned int btn_pressed = 0; //for game2 to exit countdown loop
 
-unsigned int time_3;
-unsigned int time_4ch1;
-unsigned int time_4ch2;
+unsigned int time_3 = 0;
+unsigned int time_4ch1 = 0;
+unsigned int time_4ch2 = 0;
 
 unsigned short diff;
 unsigned int randn;
@@ -112,18 +113,35 @@ void EXTI9_5_IRQHandler(void) //ISR for EXTI7 & EXTI6
   if (((EXTI->PR &BIT_7) || (EXTI->PR &BIT_6)) != 0) //most general aproach --> (EXTI->PR != 0)
   {
     // BUTTON 1 is pressed, a rising edge is detected in PB7
-    if (EXTI->PR &(1 << 7) && (playing == 1)) // 00000000010000000 in pending register of ISER[0]
+    if (EXTI->PR &(1 << 7)) // 00000000010000000 in pending register of ISER[0]
     {
-      GPIOA->BSRR = (1 << 12) << 16;
-      playing = 0;
-      winner = 1;
+      if ((game == 1) && (playing == 1))
+      {
+        GPIOA->BSRR = (1 << 12) << 16;
+        playing = 0;
+        winner = 1;
+      }
+      else if (game == 2)
+      {
+        //This code is meant to end the while loop, we will determine the winner by checking the time deltas afterwards
+        btn_pressed = 1;
+        //time_4ch2 = TIM4->CNT;
+      }
+      //else nothing
     }
     // BUTTON 2 is pressed, a rising edge is detected in PB6
-    if (EXTI->PR &(1 << 6) && (playing == 1)) // 00000000001000000 in pending register
+    if (EXTI->PR &(1 << 6)) // 00000000001000000 in pending register
     {
-      GPIOA->BSRR = (1 << 12) << 16;
-      playing = 0;
-      winner = 2;
+      if ((game == 1) && (playing == 1))
+      {
+        GPIOA->BSRR = (1 << 12) << 16;
+        playing = 0;
+        winner = 2;
+      }
+      else if (game == 2)
+      {
+        btn_pressed = 2;
+      }
     }
   }
   //Always clear flags to avoid hanging
@@ -140,17 +158,15 @@ void TIM4_IRQHandler(void) //TIC
   {
     //Code below - needed or not????
     //winner = 2; //CH1 is for PB6 - P2
-    time_4ch1 = TIM4->CNT; //the time loaded to our var shall be the current count ?? //FIXME:
+    time_4ch1 = TIM4->CCR1; //the time loaded to our var shall be the current count when clicked
     if(time_4ch1 < 0) time_4ch1 += 0x0FFFF; //to avoid overflows
-
   }
   //CH2
   if((TIM4->SR &BIT_2) != 0) //0x4
   {
     //winner = 1; //CH2 is for PB7 - P1
-    time_4ch2 = TIM4->CNT;
+    time_4ch2 = TIM4->CCR2;
     if(time_4ch2 < 0) time_4ch2 += 0x0FFFF;
-
   }
   TIM4->SR = 0;
 }
@@ -217,7 +233,7 @@ int main(void)
   GPIOB->MODER |= (1 << (7*2 + 1));
   GPIOB->MODER &= ~(1 << (7*2));
   //AF for TIM4_CH2
-  GPIOB->AFR[0] |= (0x02 << (7*4)); // Writes 0010 in AFRL7
+  GPIOB->AFR[0] |= (0x02 << (7*4)); // Writes 0010 in AFRL7 associating TIM4 to PB7
   //WE NEED INTERNAL RESISTORS - pull-up OR pull-down ?
   //We chose pull-up: a constant 1 unless we press, then its shorted to GND
   //Set up with pull-up resistor (01)
@@ -236,11 +252,11 @@ int main(void)
   //Set PB6 to 10 for AFs
   GPIOB->MODER |= (1 << (6*2 + 1));
   GPIOB->MODER &= ~(1 << (6*2));
+  //AF for TIM4_CH1
+  GPIOB->AFR[0] |= (0x02 << (6*4)); // Writes 0010 in AFRL6 associating TIM4 to PB6
   //Set up with pull-up resistor (01)
   GPIOB->PUPDR &= ~(1 << (6*2 + 1));
   GPIOB->PUPDR |= (1 << (6*2));
-  //AF for TIM4_CH1
-  GPIOB->AFR[0] |= (0x02 << (6*4)); // Writes 0010 in AFRL6
   //EXTI6
   SYSCFG->EXTICR[1] |= BIT_8; // Linking EXTI6 to GPIOB (PB6 = BUTTON 2)
                     // Sets a 1 in bit 8 see page 145 of the manual
@@ -282,11 +298,18 @@ int main(void)
   //TIM4->CCR1 = 1000; //1sec = 1000 steps
   //TIM4->CCR2 = 1000;
   TIM4->DIER = 0X0006;  //IRQ activation for CH1 & 2
-  TIM4->CCMR1 = 0x0000;
+  TIM4->CCMR1 = 0x0101; //0000 0001 0000 0001
+                        //CCyS = 01 (TIC)
+                        //OCyCE = 0
                         //OCyM = 000 (no external output)
                         //OCyPE = 0 (no preload)
-  TIM4->CCER = 0x0033;  //CCyP = 1 (falling edge)
+                        //OCyFE = 0
+
+  TIM4->CCER = 0x0033;  //CCyP = 01 (falling edge)
                         //CCyE = 1 (input capture enabled)
+  //FIXME: needed??
+  NVIC->ISER[0] |= (1 << 30); //Enables IRQ source for TIM4 in NVIC (pos 30)
+
   /* TIM2 --------------------------------------------------------------------*/
   //Assigned to PA5
   //SET-UP for TIM2_CH1 - PWM
@@ -328,11 +351,11 @@ int main(void)
   GPIOA->MODER |= (1 << (5*2 + 1));
   GPIOA->MODER &= ~(1 << (5*2));
   //AF for TIM2_CH1
-  GPIOB->AFR[0] |= (0x02 << (5*4)); // Writes 0010 in AFRL5
+  GPIOB->AFR[0] |= (0x01 << (5*4)); // Writes 0010 in AFRL5
 
   //LEDs
   /* LED1 ---------------------------------------------------------------------*/
-  //PA12 (EXTERNAL LED1) - AF
+  //PA12 (EXTERNAL LED1) - digital output (01)
   GPIOA->MODER &= ~(1 << (12*2 + 1));
   GPIOA->MODER |= (1 << (12*2));
   //Set up with pull-up resistor (01)
@@ -398,16 +421,16 @@ int main(void)
               TIM3->CR1 |= BIT_0;   //Set CEN = 1, Starts the counter
               TIM3->EGR |= BIT_0;   //UG = 1 -> Generate an update event to update all registers
               TIM3->SR = 0;         //Clear counter flags
-              randn = random_num(0, 6000); //Before 6 secs at any RANDOM time, LED1 ON
-              TIM3->CCR1 = randn; //FIXME: what does this do exactly???
-
-              TIM4->CR1 |= BIT_0;
-              TIM4->EGR |= BIT_0;
-              TIM4->SR = 0;
+              randn = random_num(0, 4000); //Before 4 secs at any RANDOM time, LED1 ON
+              TIM3->CCR1 = randn; //TIM3 sets a flag when it reaches randn
 
               while((TIM3->SR &0x0002) == 0); //loop until there is an event in timer (finishes counting up to randn)
               TIM3->SR &= ~(0x0002); //Clear flag after event
               //TIM4->SR = 0; //Clear all TIM4 flags
+
+              TIM4->CR1 |= BIT_0;
+              TIM4->EGR |= BIT_0;
+              TIM4->SR = 0;
 
               if (winner == 0) GPIOA->BSRR = (1 << 12); // LED ON while no player has pressed their button yet
               playing = 1; //We only want to accept the button presses after LED1 is lit
@@ -420,8 +443,9 @@ int main(void)
             {
               BSP_LCD_GLASS_Clear();
 
-              diff = time_4ch2 - randn; //Subtracts randn to the time when the button was pressed to obtain the time delta
-              Bin2Ascii(diff, text); //Transforms the short data type to ASCII
+              //diff = time_4ch2 - randn; //Subtracts randn to the time when the button was pressed to obtain the time delta
+              time_4ch2 += 10000;
+              Bin2Ascii(time_4ch2, text); //Transforms the short data type to ASCII
               //TODO: concatenate player number before time delta
               //player Y
               //reaction time XXXX
@@ -429,7 +453,7 @@ int main(void)
               //in this case = 1XXXX
               BSP_LCD_GLASS_DisplayString((uint8_t*) text);
 
-              espera(2*sec); //wait so the player acknowledges their win
+              espera(3*sec); //wait so the player acknowledges their win
               winner = 0; //reset winner for future match
               playing = 0;
             }
@@ -437,12 +461,13 @@ int main(void)
             {
               BSP_LCD_GLASS_Clear();
 
-              diff = time_4ch1 - randn;
-              Bin2Ascii(diff, text);
+              //diff = time_4ch1 - randn;
+              time_4ch1 += 20000;
+              Bin2Ascii(time_4ch1, text);
               //TODO: Correct winner LCD text output
               BSP_LCD_GLASS_DisplayString((uint8_t*) text);
 
-              espera(2*sec);
+              espera(3*sec);
               winner = 0;
               playing = 0;
             }
@@ -491,28 +516,33 @@ int main(void)
 
             TIM4->CR1 |= BIT_0;
             TIM4->EGR |= BIT_0;
-            //int time_left = 0;
-            //int tot_time = 10000;
             
-            playing = 1; //We need playing to = 1, if not the button interrupts wont work
-            while ((winner == 0) && (playing == 1))
+            while (btn_pressed == 0)
             {
               while ((TIM3->SR &0x0002) == 0) /*Keep displaying digits while CNT is not reached*/
               {
                 time_3 = TIM3->CNT;
-                //time_left = tot_time - time_3; //time_3 in seconds
-                //FIXME: the sum above does nothing
                 Bin2Ascii(time_3, text);
                 BSP_LCD_GLASS_DisplayString((uint8_t*) text);
 
-                if ((TIM3->SR &0x0002) != 0) BSP_LCD_GLASS_Clear();
+                if ((TIM3->SR &0x0002) != 0) BSP_LCD_GLASS_Clear(); //Clear LCD when randn is reached
                 if (prev_game != game) break;
               }
-              //We will wait here while no winner is defined
+              //We will wait here for up to 3secs after the count passes 10secs while no winner is defined
+              if (TIM3->CNT > 13000) break; //if nobody presses any button after 13s the game resets
               if (prev_game != game) break;
             }
 
-            //WINNER is determined by the interrupts, they will change the var winner to 1 or 2 respectively
+            //WINNER is determined by the whoever pressed closest to 0
+            //when 1st player clicks save their time to a var
+            //wait for the second player to click and save to var2
+            //compare vars, smallest absolute value wins
+            /*
+            while ((time_4ch1 == 0) || (time_4ch2 == 0))
+            {
+
+            }
+*/
             if (winner == 1)
             {
               GPIOA->BSRR = (1 << 12); //Turn on LED1 to indicate P1 won
@@ -528,10 +558,10 @@ int main(void)
               Bin2Ascii(diff, text);
               BSP_LCD_GLASS_DisplayString((uint8_t*) text);
 
-              espera(2*sec); //wait so the player acknowledges their win
+              espera(3*sec); //wait so the player acknowledges their win
               GPIOA->BSRR = (1 << 12) << 16; //Turn off winners LED after win
               winner = 0;
-              playing = 0;
+              btn_pressed = 0;
             }
             else if (winner == 2)
             {
@@ -541,10 +571,10 @@ int main(void)
               Bin2Ascii(diff, text);
               BSP_LCD_GLASS_DisplayString((uint8_t*) text);
 
-              espera(2*sec);
+              espera(3*sec);
               GPIOD->BSRR = (1 << 2) << 16;
               winner = 0;
-              playing = 0;
+              btn_pressed = 0;
             }
           }
         break;
