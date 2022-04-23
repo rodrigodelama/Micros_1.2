@@ -494,14 +494,21 @@ int main(void)
             //int time_left = 0;
             //int tot_time = 10000;
             
-            while ((TIM3->SR &0x0002) == 0) /*Keep displaying digits*/
+            //playing = 1;
+            while ((winner == 0) /*&& (playing == 1)*/)
             {
+              while ((TIM3->SR &0x0002) == 0) /*Keep displaying digits while CNT is not reached*/
+              {
+                time_3 = TIM3->CNT;
+                //time_left = tot_time - time_3; //time_3 in seconds
+                //FIXME: the sum above does nothing
+                Bin2Ascii(time_3, text);
+                BSP_LCD_GLASS_DisplayString((uint8_t*) text);
+
+                if (prev_game != game) break;
+              }
+              //We will wait here while no winner is defined
               if (prev_game != game) break;
-              time_3 = TIM3->CNT;
-              //time_left = tot_time - time_3; //time_3 in seconds
-              //FIXME: the sum above does nothing
-              Bin2Ascii(time_3, text);
-              BSP_LCD_GLASS_DisplayString((uint8_t*) text);
             }
 
             //WINNER is determined by the interrupts, they will change the var winner to 1 or 2 respectively
@@ -512,6 +519,10 @@ int main(void)
 
               //Pressing before the countdown ends will result in displaying -XXXX time left
               //Pressing after the countdown ends will result in displaying +XXXX time passed
+
+              //do the diff between randn and tim4->cnt
+              //if (TIM4->CNT < rand)
+
               diff = time_4ch2 - randn;
               Bin2Ascii(diff, text);
               BSP_LCD_GLASS_DisplayString((uint8_t*) text);
