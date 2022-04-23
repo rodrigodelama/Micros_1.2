@@ -537,8 +537,8 @@ int main(void)
               if ((TIM3->SR &0x0002) != 0)
               {
                 BSP_LCD_GLASS_Clear(); //Clear LCD when randn is reached by TIM3
-                //We will wait here for up to 3secs after the count passes 10secs while no winner is defined
-                if (TIM3->CNT > 13000) break; //if nobody presses any button after 13s the game resets
+                //We will wait here for up to 2secs after the count passes 10secs while no winner is defined
+                if (TIM3->CNT > 12000) break; //if nobody presses any button after 13s the game resets
               }
 
               if (prev_game != game) break;
@@ -551,34 +551,52 @@ int main(void)
             //compare vars, smallest absolute value wins
 
             //If the game was engaged with, wait for the other player to attempt their press
-
             while ((time_4ch1 == 0) || (time_4ch2 == 0))
             {
-              if((time_4ch1 == 0)&& (time_4ch2 == 0)) break;
-              //Grace period of 3secs from countdown reaching 0, if not automatically the only player to click will win
-              if (TIM3->CNT > 13000)
+              if((time_4ch1 == 0) && (time_4ch2 == 0)) break; //if no one pressed break
+              //Grace period of 2secs from countdown reaching 0, if not automatically the only player to click will win
+              if (TIM3->CNT > 12000)
               {
-                if(time_4ch1 == 0) winner = 1;
-                else if (time_4ch2 == 0) winner = 2;
-                else break;
+                if (time_4ch1 == 0) //If only P2 pressed, they win
+                {
+                  winner = 1;
+                  break;
+                }
+                else if (time_4ch2 == 0) //If only P1 pressed, they win
+                {
+                  winner = 2;
+                  break;
+                }
+                else
+                {
+                  break;
+                }
               }
             }
 
-            if(abs(time_4ch1) > abs(time_4ch2))
+            if(time_4ch1 == time_4ch2) //unlikely but maybe still a possibility
+            {
+              if ((time_4ch1 == 0) && (time_4ch2 == 0)); //no one played - discard
+              else
+              BSP_LCD_GLASS_DisplayString((uint8_t*) " TIE");
+              espera(2*sec);
+            }
+            else if((time_4ch1 == 0) || (time_4ch2 == 0))
+            {
+              //if one of them is 0, with the code above, the only player to press automatically wins
+            }
+            else if(abs(time_4ch1) > abs(time_4ch2))
             {
               winner = 1;
-            } else if(abs(time_4ch2) > abs(time_4ch1)) {
+            }
+            else if(abs(time_4ch2) > abs(time_4ch1))
+            {
               winner = 2;
-            } else { //They are equally close to zero.
-              BSP_LCD_GLASS_DisplayString((uint8_t*) " TIE"); //unlikely but still a possibility
-              espera(3*sec);
-              break;
             }
 
             if (winner == 1)
             {
               GPIOA->BSRR = (1 << 12); //Turn on LED1 to indicate P1 won
-              //BSP_LCD_GLASS_Clear(); //Not needed in game2, the display will be cleared after the rand count ends
 
               //Pressing before the countdown ends will result in displaying -XXXX time left
               //Pressing after the countdown ends will result in displaying +XXXX time passed
