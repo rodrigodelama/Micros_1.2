@@ -69,6 +69,8 @@ unsigned int btn_pressed = 0; //for game2 to exit countdown loop
 unsigned int time_3 = 0;
 unsigned int time_4ch1 = 0;
 unsigned int time_4ch2 = 0;
+unsigned int time_4ch1_delta_TIM3 = 0;
+unsigned int time_4ch2_delta_TIM3 = 0;
 
 unsigned short delta;
 unsigned int randn;
@@ -159,12 +161,14 @@ void TIM4_IRQHandler(void) //TIC
   {
     time_4ch1 = TIM4->CCR1; //The time loaded to our var shall be the count when the button was clicked
     if(time_4ch1 < 0) time_4ch1 += 0x0FFFF; //to avoid overflows
+    time_4ch1_delta_TIM3 = time_4ch1 - ten_thousand;
   }
   //CH2 for PB7 - Player 1
   if((TIM4->SR &BIT_2) != 0) //0x4
   {
     time_4ch2 = TIM4->CCR2;
     if(time_4ch2 < 0) time_4ch2 += 0x0FFFF;
+    time_4ch2_delta_TIM3 = time_4ch2 - ten_thousand;
   }
   TIM4->SR = 0;
 }
@@ -501,6 +505,8 @@ int main(void)
             btn_pressed = 0;
             time_4ch1 = 0;
             time_4ch2 = 0;
+            time_4ch1_delta_TIM3 = 0;
+            time_4ch2_delta_TIM3 = 0;
 
             //Start counters
             TIM3->CR1 |= BIT_0;   //Set CEN = 1, Starts the counter
@@ -604,8 +610,8 @@ int main(void)
               //do the delta between randn and tim4->cnt
               //if (TIM4->CNT < rand)
 
-              delta = time_4ch2 - randn;
-              Bin2Ascii(delta, text);
+              //delta = time_4ch2 - ten_thousand;
+              Bin2Ascii(time_4ch2_delta_TIM3, text);
               BSP_LCD_GLASS_DisplayString((uint8_t*) text);
 
               espera(3*sec); //wait so the player acknowledges their win
@@ -615,8 +621,8 @@ int main(void)
             {
               GPIOD->BSRR = (1 << 2); //Turn on LED2 to indicate P2 won
 
-              delta = time_4ch1 - randn;
-              Bin2Ascii(delta, text);
+              //delta = time_4ch1 - ten_thousand;
+              Bin2Ascii(time_4ch1_delta_TIM3, text);
               BSP_LCD_GLASS_DisplayString((uint8_t*) text);
 
               espera(3*sec);
