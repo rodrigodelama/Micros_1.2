@@ -73,8 +73,9 @@ unsigned int time_4ch2 = 0;
 unsigned short diff;
 unsigned int randn;
 
-uint8_t text[6]; //ASCII character array to output in the discovery LCD
-unsigned short countdown[10] = {10, 9, 8, 7, 6, 5, 4, 3, 2, 1};
+unsigned int countdown;
+
+uint8_t text[6]; //ASCII character array to output in the Discovery LCD
 
 short duty_cycle = 1;
 /* USER CODE END PV */
@@ -166,6 +167,10 @@ void TIM4_IRQHandler(void) //TIC
   }
   TIM4->SR = 0;
 }
+
+//ADC
+//ADC IRQ to determine the countdown downstep of (0.5, 1 or 2 secs) depending on the 
+
 /* USER CODE END 0 */
 
 /**
@@ -489,14 +494,13 @@ int main(void)
             BSP_LCD_GLASS_DisplayString((uint8_t*)" READY");
             espera(2*sec);
             if (prev_game != game) break;
-            BSP_LCD_GLASS_Clear();
-            BSP_LCD_GLASS_DisplayString((uint8_t*)" GO");
 
             //Start counters
             TIM3->CR1 |= BIT_0;   //Set CEN = 1, Starts the counter
             TIM3->EGR |= BIT_0;   //UG = 1 -> Generate an update event to update all registers
-            TIM3->SR = 0;         //clear counter flags
-            randn = random_num(0, 10000); //rand num between 0 and 10 seconds
+            TIM3->SR = 0;         //Clear counter flags
+            randn = random_num(500, 9500); //rand num between 0.5 and 9.5 seconds
+                                           //(so the players can see the game started and it doesnt finish too close to 0)
             TIM3->CCR1 = randn;
 
             TIM4->CR1 |= BIT_0;
@@ -506,17 +510,26 @@ int main(void)
             {
               while ((TIM3->SR &0x0002) == 0) /*Keep displaying digits while CNT is not reached*/
               {
+                //TODO: Make the LCD only display whole numbers (10, 9, 8, etc)
                 time_3 = TIM3->CNT;
-                Bin2Ascii(time_3, text);
-                BSP_LCD_GLASS_DisplayString((uint8_t*) text);
+                countdown = 10000 - time_3;
+                // if number is whole 10000, divide by 1000 and display
+                if(countdown%1000 == 0)
+                {
+                  countdown /= 1000;
+                  Bin2Ascii(countdown, text);
+                  BSP_LCD_GLASS_DisplayString((uint8_t*) text);
+                }
 
-                if ((TIM3->SR &0x0002) != 0) BSP_LCD_GLASS_Clear(); //Clear LCD when randn is reached by TIM3
                 if (prev_game != game) break;
               }
+              if ((TIM3->SR &0x0002) != 0) BSP_LCD_GLASS_Clear(); //Clear LCD when randn is reached by TIM3
+
               //We will wait here for up to 3secs after the count passes 10secs while no winner is defined
               if (TIM3->CNT > 13000) break; //if nobody presses any button after 13s the game resets
               if (prev_game != game) break;
             }
+            TIM3->SR &= ~(0x0002); //Clear flag after any button press
 
             //WINNER is determined by the whoever pressed closest to 0
             //when 1st player clicks save their time to a var
