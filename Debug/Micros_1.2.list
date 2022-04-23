@@ -1615,9 +1615,9 @@ int main(void)
  8000c66:	681b      	ldr	r3, [r3, #0]
  8000c68:	429a      	cmp	r2, r3
  8000c6a:	d114      	bne.n	8000c96 <main+0x606>
-              time_3 = TIM4->CCR2;
- 8000c6c:	4b49      	ldr	r3, [pc, #292]	; (8000d94 <main+0x704>)
- 8000c6e:	6b9b      	ldr	r3, [r3, #56]	; 0x38
+              time_3 = TIM3->CNT;
+ 8000c6c:	4b47      	ldr	r3, [pc, #284]	; (8000d8c <main+0x6fc>)
+ 8000c6e:	6a5b      	ldr	r3, [r3, #36]	; 0x24
  8000c70:	4a49      	ldr	r2, [pc, #292]	; (8000d98 <main+0x708>)
  8000c72:	6013      	str	r3, [r2, #0]
               //time_left = tot_time - time_3; //time_3 in seconds

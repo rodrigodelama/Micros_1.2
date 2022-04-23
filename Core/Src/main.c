@@ -497,7 +497,7 @@ int main(void)
             while ((TIM3->SR &0x0002) == 0) /*Keep displaying digits*/
             {
               if (prev_game != game) break;
-              time_3 = TIM4->CCR2;
+              time_3 = TIM3->CNT;
               //time_left = tot_time - time_3; //time_3 in seconds
               //FIXME: the sum above does nothing
               Bin2Ascii(time_3, text);
