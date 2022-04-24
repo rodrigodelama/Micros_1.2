@@ -77,6 +77,7 @@ unsigned int randn;
 
 unsigned int countdown;
 unsigned int ten_thousand = 10000;
+unsigned int potentiometer_value;
 
 uint8_t text[6]; //ASCII character array to output in the Discovery LCD
 
@@ -526,16 +527,32 @@ int main(void)
                 time_3 = TIM3->CNT;
                 countdown = 10000 - time_3;
 
-                //TODO: checkpoint 3 do a switch and find the other multiples for 0.5s and 2s
-
-                //To display only whole numbers (1sec increments) if the
-                //number is a multiple of 10000, divide it by 1000 and display
-                //In this case the LCD only display whole numbers (10, 9, 8, etc)
-                if(countdown%1000 == 0)
+                //TODO: modification for checkpoint 3
+                //a switch that finds the multiples for 0.5s, 1s and 2s to only display those increments
+                potentiometer_value = 2;
+                switch(potentiometer_value)
                 {
-                  countdown /= 1000;
-                  Bin2Ascii(countdown, text);
-                  BSP_LCD_GLASS_DisplayString((uint8_t*) text);
+                  case 1: //lowest position
+                    if(countdown%500 != 0) break; //inverse guard clause
+                    countdown /= 1000;
+                    Bin2Ascii(countdown, text);
+                    BSP_LCD_GLASS_DisplayString((uint8_t*) text);
+                  break;
+                  case 2: //mid pos
+                    //To display only whole numbers (1sec increments) if the
+                    //number is a multiple of 10000, divide it by 1000 and display
+                    //In this case the LCD only display whole numbers (10, 9, 8, etc)
+                    if(countdown%1000 != 0) break;
+                    countdown /= 1000;
+                    Bin2Ascii(countdown, text);
+                    BSP_LCD_GLASS_DisplayString((uint8_t*) text);
+                  break;
+                  case 3: //max pos
+                    if(countdown%2000 != 0) break;
+                    countdown /= 1000;
+                    Bin2Ascii(countdown, text);
+                    BSP_LCD_GLASS_DisplayString((uint8_t*) text);
+                  break;
                 }
 
                 if (prev_game != game) break;
@@ -632,7 +649,6 @@ int main(void)
         break;
 
         //This code below should be unreachable on purpose
-        //Written to acknowledge a logical failure (of our code)
         default:
           GPIOA->BSRR = (1 << 12) << 16;
           BSP_LCD_GLASS_Clear();
@@ -643,7 +659,7 @@ int main(void)
         break;
       }
     }
-  HAL_Delay(50); //To avoid 'bouncing' in the button presses
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -965,12 +981,23 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOC_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
+  __HAL_RCC_GPIOD_CLK_ENABLE();
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_2, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : B1_Pin */
   GPIO_InitStruct.Pin = B1_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_EVT_RISING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : PD2 */
+  GPIO_InitStruct.Pin = GPIO_PIN_2;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
 
 }
 
