@@ -165,19 +165,17 @@ void TIM4_IRQHandler(void) //TIC
   //CH1 for PB6 - Player 2
   if((TIM4->SR &BIT_1) != 0) //0x2
   {
-    time_4ch1 = TIM4->CCR1 - init_time_4ch1; //The time loaded to our var shall be the count when the button was clicked
+    time_4ch1 = TIM4->CCR1; //The time loaded to our var shall be the count when the button was clicked
     if(time_4ch1 < 0) time_4ch1 += 0x0FFFF; //to avoid overflows
     time_4ch1_delta_TIM3 = time_4ch1;
-    init_time_4ch1 = TIM4->CCR1;
     TIM4->SR = 0x0;
   }
   //CH2 for PB7 - Player 1
   if((TIM4->SR &BIT_2) != 0) //0x4
   {
-    time_4ch2 = TIM4->CCR2 - init_time_4ch2;
+    time_4ch2 = TIM4->CCR2;
     if(time_4ch2 < 0) time_4ch2 += 0x0FFFF;
     time_4ch2_delta_TIM3 = time_4ch2;
-    init_time_4ch2 = TIM4->CCR2;
     TIM4->SR = 0x0;
   }
   //TIM4->SR = 0;
@@ -617,24 +615,23 @@ int main(void)
             //If the game was engaged with, wait for the other player to attempt their press
             while ((time_4ch1 == 0) || (time_4ch2 == 0))
             {
-              if((time_4ch1 == 0) && (time_4ch2 == 0)) break; //if no one pressed break
+              if((time_4ch1 == 0) && (time_4ch2 == 0))
+              {
+                BSP_LCD_GLASS_DisplayString((uint8_t*) "  END");
+                espera(2*sec);
+                break; //if no one pressed break
+              }
               //Grace period of 2secs from countdown reaching 0, if not automatically the only player to click will win
               if (TIM3->CNT > 12000)
               {
-                if (time_4ch1 == 0) //If only P2 pressed, they win
+                if (time_4ch1 == 0) //If only P1 pressed, they win
                 {
                   winner = 1;
                   break; //break out of while loop
                 }
-                else if (time_4ch2 == 0) //If only P1 pressed, they win
+                else if (time_4ch2 == 0) //If only P2 pressed, they win
                 {
                   winner = 2;
-                  break;
-                }
-                else
-                {
-                  BSP_LCD_GLASS_DisplayString((uint8_t*) "  END");
-                  espera(2*sec);
                   break;
                 }
               }
