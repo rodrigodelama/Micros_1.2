@@ -71,6 +71,8 @@ unsigned int time_4ch1 = 0;
 unsigned int time_4ch2 = 0;
 unsigned int time_4ch1_delta_TIM3 = 0;
 unsigned int time_4ch2_delta_TIM3 = 0;
+unsigned int init_time_4ch1 = 0;
+unsigned int init_time_4ch2 = 0;
 
 unsigned short delta;
 unsigned int randn;
@@ -160,18 +162,22 @@ void TIM4_IRQHandler(void) //TIC
   //CH1 for PB6 - Player 2
   if((TIM4->SR &BIT_1) != 0) //0x2
   {
-    time_4ch1 = TIM4->CCR1; //The time loaded to our var shall be the count when the button was clicked
+    time_4ch1 = TIM4->CCR1 - init_time_4ch1; //The time loaded to our var shall be the count when the button was clicked
     if(time_4ch1 < 0) time_4ch1 += 0x0FFFF; //to avoid overflows
-    time_4ch1_delta_TIM3 = time_4ch1 - ten_thousand;
+    time_4ch1_delta_TIM3 = time_4ch1;
+    init_time_4ch1 = TIM4->CCR1;
+    TIM4->SR = 0x0;
   }
   //CH2 for PB7 - Player 1
   if((TIM4->SR &BIT_2) != 0) //0x4
   {
-    time_4ch2 = TIM4->CCR2;
+    time_4ch2 = TIM4->CCR2 - init_time_4ch2;
     if(time_4ch2 < 0) time_4ch2 += 0x0FFFF;
-    time_4ch2_delta_TIM3 = time_4ch2 - ten_thousand;
+    time_4ch2_delta_TIM3 = time_4ch2;
+    init_time_4ch2 = TIM4->CCR2;
+    TIM4->SR = 0x0;
   }
-  TIM4->SR = 0;
+  //TIM4->SR = 0;
 }
 
 //ADC
