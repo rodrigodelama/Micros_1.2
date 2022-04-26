@@ -74,10 +74,15 @@ unsigned int time_4ch2 = 0;
 
 unsigned short delta;
 unsigned int randn;
+unsigned int low_limit_randn = 500;
+unsigned int high_limit_randn;
 
 unsigned int countdown;
-unsigned int ten_thousand = 10000;
-unsigned int potentiometer_value;
+unsigned int potentiometer_value = 1; //FIXME: delete to make sure the pottentiometer actually works later
+unsigned int prev_potentiometer_value = 0;
+
+unsigned int timeout_time = 0;
+unsigned int timer_count_limit = 0;
 
 uint8_t text[6]; //ASCII character array to output in the Discovery LCD
 
@@ -177,7 +182,7 @@ void TIM4_IRQHandler(void) //TIC
 //ADC IRQ to determine the countdown downstep of (0.5, 1 or 2 secs) depending on the
 void ADC1_IRQHandler(void)
 {
-  ADC1->SR &= ~(1 << 1); //what does this do
+  ADC1->SR &= ~(1 << 1); //what does this do (EOC to 0, meaning we have work to do yet)
 
   if ((ADC1->SQR5 &0x001F) == 1)
   {
@@ -196,7 +201,6 @@ void ADC1_IRQHandler(void)
     */
   }
 }
-
 
 /* USER CODE END 0 */
 
@@ -520,161 +524,232 @@ int main(void)
             ADC1->CR2 |= 0x40000000; // When ADCONS = 1, start conversion (SWSTART = 1)
             */
             
-            BSP_LCD_GLASS_Clear();
-            BSP_LCD_GLASS_DisplayString((uint8_t*)" GAME2");
-            espera(2*sec);
-            if (prev_game != game) break;
-
-            BSP_LCD_GLASS_Clear();
-            BSP_LCD_GLASS_DisplayString((uint8_t*)" READY");
-            espera(2*sec);
-            if (prev_game != game) break;
-
-            //Initial conditions reset
-            winner = 0;
-            btn_pressed = 0;
-            time_4ch1 = 0;
-            time_4ch2 = 0;
-
-            //Start counters
-            TIM3->CR1 |= BIT_0;   //Set CEN = 1, Starts the counter
-            TIM3->EGR |= BIT_0;   //UG = 1 -> Generate an update event to update all registers
-            TIM3->SR = 0;         //Clear counter flags
-            randn = random_num(500, 9500); //rand num between 0.5 and 9.5 seconds
-                                           //(so the players can see the game started and it doesnt finish too close to 0)
-            TIM3->CCR1 = randn;
-
-            TIM4->CR1 |= BIT_0;
-            TIM4->EGR |= BIT_0;
-            
-            while (btn_pressed == 0)
+            //TODO:
+            if (prev_potentiometer_value != potentiometer_value)
             {
-              //TODO: maybe use countdown_speed
+              //TODO: verify
+              prev_potentiometer_value = potentiometer_value;
               potentiometer_value = ADC1->DR;
-              while ((TIM3->SR &0x0002) == 0) /*Keep displaying digits while CNT is not reached*/
-              {
-                time_3 = TIM3->CNT;
-                countdown = 10000 - time_3;
 
-                //TODO: modification for checkpoint 3
-                //a switch that finds the multiples for 0.5s, 1s and 2s to only display those increments
-                potentiometer_value = 2;
-                switch(potentiometer_value)
+              BSP_LCD_GLASS_Clear();
+              BSP_LCD_GLASS_DisplayString((uint8_t*)" GAME2");
+              espera(2*sec);
+              if (prev_game != game) break;
+
+              BSP_LCD_GLASS_Clear();
+              BSP_LCD_GLASS_DisplayString((uint8_t*)" READY");
+              espera(2*sec);
+              if (prev_game != game) break;
+
+              //Initial conditions reset
+              winner = 0;
+              btn_pressed = 0;
+              time_4ch1 = 0;
+              time_4ch2 = 0;
+
+              //Start counters
+              TIM3->CR1 |= BIT_0;   //Set CEN = 1, Starts the counter
+              TIM3->EGR |= BIT_0;   //UG = 1 -> Generate an update event to update all registers
+              TIM3->SR = 0;         //Clear counter flags
+
+              switch(potentiometer_value)
+              {
+                  case 1:
+                    high_limit_randn = 4500;
+                    timer_count_limit = 5000;
+                    timeout_time = 7000;
+                  break;
+                  case 2:
+                    high_limit_randn = 9500;
+                    timer_count_limit = 10000;
+                    timeout_time = 12000;
+                  break;
+                  case 3:
+                    high_limit_randn = 19500;
+                    timer_count_limit = 20000;
+                    timeout_time = 22000;
+                  break;
+              }
+              randn = random_num(low_limit_randn, high_limit_randn); //rand num between 0.5 and x seconds
+                                            //(so the players can see the game started and it doesnt finish too close to 0)
+              TIM3->CCR1 = randn;
+
+              TIM4->CR1 |= BIT_0;
+              TIM4->EGR |= BIT_0;
+              
+              while (btn_pressed == 0)
+              {
+
+                while ((TIM3->SR &0x0002) == 0) /*Keep displaying digits while CNT is not reached*/
                 {
-                  case 1: //lowest position
-                    if(countdown%500 != 0) break; //inverse guard clause
-                    countdown /= 1000;
-                    Bin2Ascii(countdown, text);
-                    BSP_LCD_GLASS_DisplayString((uint8_t*) text);
-                  break;
-                  case 2: //mid pos
-                    //To display only whole numbers (1sec increments) if the
-                    //number is a multiple of 10000, divide it by 1000 and display
-                    //In this case the LCD only display whole numbers (10, 9, 8, etc)
-                    if(countdown%1000 != 0) break;
-                    countdown /= 1000;
-                    Bin2Ascii(countdown, text);
-                    BSP_LCD_GLASS_DisplayString((uint8_t*) text);
-                  break;
-                  case 3: //max pos
-                    if(countdown%2000 != 0) break;
-                    countdown /= 1000;
-                    Bin2Ascii(countdown, text);
-                    BSP_LCD_GLASS_DisplayString((uint8_t*) text);
-                  break;
+                  time_3 = TIM3->CNT;
+
+                  //TODO: modification for checkpoint 3
+                  //a switch that makes the countdown decrease in steps of 0.5s, 1s and 2s (display 10, 9, 8...)
+                  switch(potentiometer_value)
+                  {
+                    case 1: //lowest position 
+                      countdown = timer_count_limit - time_3;
+
+                      if(countdown%500 != 0) break; //inverse guard clause
+                      countdown /= 500;
+                      Bin2Ascii(countdown, text);
+                      BSP_LCD_GLASS_DisplayString((uint8_t*) text);
+                    break;
+                    case 2: //mid pos
+                      //To display only whole numbers (1sec increments) if the
+                      //number is a multiple of 10000, divide it by 1000 and display
+                      //In this case the LCD only display whole numbers (10, 9, 8, etc)
+                      countdown = timer_count_limit - time_3;
+
+                      if(countdown%1000 != 0) break;
+                      countdown /= 1000;
+                      Bin2Ascii(countdown, text);
+                      BSP_LCD_GLASS_DisplayString((uint8_t*) text);
+                    break;
+                    case 3: //max pos
+                      countdown = timer_count_limit - time_3;
+                      
+                      if(countdown%2000 != 0) break;
+                      countdown /= 2000;
+                      Bin2Ascii(countdown, text);
+                      BSP_LCD_GLASS_DisplayString((uint8_t*) text);
+                    break;
+                  }
+
+                  if (prev_game != game) break;
+                }
+                if ((TIM3->SR &0x0002) != 0)
+                {
+                  BSP_LCD_GLASS_Clear(); //Clear LCD when randn is reached by TIM3
+                  //We will wait here for up to 2secs after the count passes 10secs while no winner is defined
+                  if (TIM3->CNT > timeout_time) break; //if nobody presses any button after 13s the game resets
                 }
 
                 if (prev_game != game) break;
               }
-              if ((TIM3->SR &0x0002) != 0)
-              {
-                BSP_LCD_GLASS_Clear(); //Clear LCD when randn is reached by TIM3
-                //We will wait here for up to 2secs after the count passes 10secs while no winner is defined
-                if (TIM3->CNT > 12000) break; //if nobody presses any button after 13s the game resets
-              }
+              TIM3->SR &= ~(0x0002); //Clear flag after any button press
 
-              if (prev_game != game) break;
-            }
-            TIM3->SR &= ~(0x0002); //Clear flag after any button press
+              //WINNER is determined by the whoever pressed closest to 0
+              //when 1st player clicks save their time to a var
+              //wait for the second player to click and save to var2
+              //compare vars, smallest absolute value wins
 
-            //WINNER is determined by the whoever pressed closest to 0
-            //when 1st player clicks save their time to a var
-            //wait for the second player to click and save to var2
-            //compare vars, smallest absolute value wins
-
-            //If the game was engaged with, wait for the other player to attempt their press
-            while ((time_4ch1 == 0) || (time_4ch2 == 0))
-            {
-              if((time_4ch1 == 0) && (time_4ch2 == 0))
+              //If the game was engaged with, wait for the other player to attempt their press
+              while ((time_4ch2 == 0) || (time_4ch1 == 0))
               {
-                BSP_LCD_GLASS_DisplayString((uint8_t*) "  END");
-                espera(2*sec);
-                break; //if no one pressed break
-              }
-              //Grace period of 2secs from countdown reaching 0, if not automatically the only player to click will win
-              if (TIM3->CNT > 12000)
-              {
-                if (time_4ch1 == 0) //If only P1 pressed, they win
+                if((time_4ch2 == 0) && (time_4ch1 == 0))
                 {
-                  winner = 1;
-                  break; //break out of while loop
+                  BSP_LCD_GLASS_DisplayString((uint8_t*) "  END");
+                  espera(2*sec);
+                  break; //if no one pressed break
                 }
-                else if (time_4ch2 == 0) //If only P2 pressed, they win
+                //Grace period of 2secs from countdown reaching 0, if not automatically the only player to click will win
+                if (TIM3->CNT > timeout_time)
                 {
-                  winner = 2;
+                  if (time_4ch1 == 0) //If only P1 pressed, they win
+                  {
+                    winner = 1;
+                    break; //break out of while loop
+                  }
+                  else if (time_4ch2 == 0) //If only P2 pressed, they win
+                  {
+                    winner = 2;
+                    break;
+                  }
+                }
+              }
+
+              if(time_4ch1 == time_4ch2) //unlikely but maybe still a possibility
+              {
+                if ((time_4ch1 == 0) && (time_4ch2 == 0)); //no one played - discard
+                else
+                BSP_LCD_GLASS_DisplayString((uint8_t*) "  TIE");
+                espera(2*sec);
+              }
+              else if((time_4ch1 == 0) || (time_4ch2 == 0))
+              {
+                //if one of them is 0, with the code above, the only player to press automatically wins //TODO: verify the necesity of this condition
+              }
+              else if(abs(time_4ch1 - timer_count_limit) > abs(time_4ch2 - timer_count_limit)) //who is closer to timer_count_limit ??
+              {
+                winner = 1;
+              }
+              else if(abs(time_4ch2 - timer_count_limit) > abs(time_4ch1 - timer_count_limit))
+              {
+                winner = 2;
+              }
+
+              if (winner == 1)
+              {
+                GPIOA->BSRR = (1 << 12); //Turn on LED1 to indicate P1 won
+
+                //Pressing before the countdown ends will result in displaying -XXXX time left
+                //Pressing after the countdown ends will result in displaying +XXXX time passed
+
+                //Depending on the step value we must calculate the time delta
+                delta = timer_count_limit - time_4ch2;
+                Bin2Ascii(delta, text);
+                if(TIM3->CNT < timer_count_limit)
+                {
+                  //PLAY MELODY 1 (player pressed before end of countdown)
+                  text[1] = (uint8_t) "-";
+                }
+                else
+                {
+                  //PLAY MELODY 2 (player pressed before end of countdown)
+                  text[1] = (uint8_t) "+";
+                }
+                BSP_LCD_GLASS_DisplayString((uint8_t*) text);
+
+                espera(3*sec); //wait so the player acknowledges their win
+                GPIOA->BSRR = (1 << 12) << 16; //Turn off winners LED after win
+              }
+              else if (winner == 2)
+              {
+                GPIOD->BSRR = (1 << 2); //Turn on LED2 to indicate P2 won
+                /*
+                switch (potentiometer_value)
+                {
+                  case 1:
+                    delta = 5000 - 0.5*time_4ch1;
+                    timer_count_limit = 5000;
+                  break;
+                  case 2:
+                    delta = 10000 - time_4ch1;
+                    timer_count_limit = 10000;
+                  break;
+                  case 3:
+                    delta = 20000 - 2*time_4ch1;
+                    timer_count_limit = 20000;
+                  break;
+                  default:
+                    BSP_LCD_GLASS_Clear();
+                    BSP_LCD_GLASS_DisplayString((uint8_t*)" ERROR");
+                    espera(2*sec);
+                    BSP_LCD_GLASS_Clear();
+                    BSP_LCD_GLASS_DisplayString((uint8_t*)" RESET");
+                    espera(2*sec);
                   break;
                 }
+                */
+                delta = timer_count_limit - time_4ch1;
+                Bin2Ascii(delta, text);
+                if(TIM3->CNT < timer_count_limit)
+                {
+                  //PLAY MELODY 1
+                  text[1] = (uint8_t*) "-";
+                }
+                else
+                {
+                  //PLAY MELODY 2
+                  text[1] = (uint8_t*) "+";
+                }
+                BSP_LCD_GLASS_DisplayString((uint8_t*) text);
+
+                espera(3*sec);
+                GPIOD->BSRR = (1 << 2) << 16;
               }
-            }
-
-            if(time_4ch1 == time_4ch2) //unlikely but maybe still a possibility
-            {
-              if ((time_4ch1 == 0) && (time_4ch2 == 0)); //no one played - discard
-              else
-              BSP_LCD_GLASS_DisplayString((uint8_t*) "  TIE");
-              espera(2*sec);
-            }
-            else if((time_4ch1 == 0) || (time_4ch2 == 0))
-            {
-              //if one of them is 0, with the code above, the only player to press automatically wins
-            }
-            else if(abs(time_4ch1 - ten_thousand) > abs(time_4ch2 - ten_thousand))
-            {
-              winner = 1;
-            }
-            else if(abs(time_4ch2 - ten_thousand) > abs(time_4ch1 - ten_thousand))
-            {
-              winner = 2;
-            }
-
-            if (winner == 1)
-            {
-              GPIOA->BSRR = (1 << 12); //Turn on LED1 to indicate P1 won
-
-              //Pressing before the countdown ends will result in displaying -XXXX time left
-              //Pressing after the countdown ends will result in displaying +XXXX time passed
-
-              delta = ten_thousand - time_4ch2;
-              Bin2Ascii(delta, text);
-              if(TIM3->CNT < 10000) text[1] = (uint8_t) "-";
-              else text[1] = (uint8_t) "+";
-              BSP_LCD_GLASS_DisplayString((uint8_t*) text);
-
-              espera(3*sec); //wait so the player acknowledges their win
-              GPIOA->BSRR = (1 << 12) << 16; //Turn off winners LED after win
-            }
-            else if (winner == 2)
-            {
-              GPIOD->BSRR = (1 << 2); //Turn on LED2 to indicate P2 won
-
-              delta = ten_thousand - time_4ch1;
-              Bin2Ascii(delta, text);
-              if(TIM3->CNT < 10000) text[1] = (uint8_t*) "-";
-              else text[1] = (uint8_t*) "+";
-              BSP_LCD_GLASS_DisplayString((uint8_t*) text);
-
-              espera(3*sec);
-              GPIOD->BSRR = (1 << 2) << 16;
             }
           }
         break;
