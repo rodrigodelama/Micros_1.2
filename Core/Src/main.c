@@ -58,6 +58,8 @@ TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim3;
 TIM_HandleTypeDef htim4;
 
+UART_HandleTypeDef huart3;
+
 /* USER CODE BEGIN PV */
 //GLOBAL VARS & DEFINITIONS
 unsigned int prev_game = 0;
@@ -95,6 +97,7 @@ static void MX_TS_Init(void);
 static void MX_TIM3_Init(void);
 static void MX_TIM4_Init(void);
 static void MX_TIM2_Init(void);
+static void MX_USART3_UART_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -181,7 +184,29 @@ void TIM4_IRQHandler(void) //TIC
 }
 
 //ADC
-//ADC IRQ to determine the countdown downstep of (0.5, 1 or 2 secs) depending on the 
+//ADC IRQ to determine the countdown downstep of (0.5, 1 or 2 secs) depending on the
+void ADC1_IRQHandler(void)
+{
+  ADC1->SR &= ~(1 << 1); //what does this do
+
+  if ((ADC1->SQR5 &0x001F) == 1)
+  {
+    ADC1->SQR5 = 0x05;
+    /*
+    if (ADC->DR > 67) obstacle_IN = 1;
+    else obstacle_IN = 0;
+    */
+  }
+  else if ((ADC1->SQR5 &0x001F) == 5)
+  {
+    ADC1->SQR5 = 0x01;
+    /*
+    if (ADC->DR > 67) obstacle_OUT = 1;
+    else obstacle_OUT = 0;
+    */
+  }
+}
+
 
 /* USER CODE END 0 */
 
@@ -219,6 +244,7 @@ int main(void)
   MX_TIM3_Init();
   MX_TIM4_Init();
   MX_TIM2_Init();
+  MX_USART3_UART_Init();
   /* USER CODE BEGIN 2 */
   //DECLARATION OF PERIPHERALS WE WILL USE
 
@@ -351,6 +377,7 @@ int main(void)
                               // CONT = 1 (continuous conversion)
   ADC1->SQR1 = 0x00000000;    // Set to 0 - activates 1 channel
   ADC1->SQR5 = 0x00000004;    // Selected channel is AIN4
+  NVIC->ISER[0] |= (1 << 18);
 
   /* BUZZER -------------------------------------------------------------------*/
   //PA5 as AF because we want it as PWM (send different frequencies at different points)
@@ -375,6 +402,12 @@ int main(void)
   GPIOD->PUPDR &= ~(1 << (2*2 + 1));
   GPIOD->PUPDR |= (1 << (2*2));
 
+  //USART
+  /* TX -----------------------------------------------------------------------*/
+  
+  /* RX -----------------------------------------------------------------------*/
+
+  NVIC->ISER[1] |= (1 << 7); //position 39 (for ISER[1], 0 is 32, 7 is 39)
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -528,6 +561,8 @@ int main(void)
             
             while (btn_pressed == 0)
             {
+              //TODO: maybe use countdown_speed
+              potentiometer_value = ADC1->DR;
               while ((TIM3->SR &0x0002) == 0) /*Keep displaying digits while CNT is not reached*/
               {
                 time_3 = TIM3->CNT;
@@ -598,6 +633,8 @@ int main(void)
                 }
                 else
                 {
+                  BSP_LCD_GLASS_DisplayString((uint8_t*) "  END");
+                  espera(2*sec);
                   break;
                 }
               }
@@ -633,8 +670,8 @@ int main(void)
               //do the delta between randn and tim4->cnt
               //if (TIM4->CNT < rand)
 
-              //delta = time_4ch2 - ten_thousand;
-              Bin2Ascii(time_4ch2_delta_TIM3, text);
+              delta = time_4ch2 - ten_thousand;
+              Bin2Ascii(delta, text);
               BSP_LCD_GLASS_DisplayString((uint8_t*) text);
 
               espera(3*sec); //wait so the player acknowledges their win
@@ -644,8 +681,8 @@ int main(void)
             {
               GPIOD->BSRR = (1 << 2); //Turn on LED2 to indicate P2 won
 
-              //delta = time_4ch1 - ten_thousand;
-              Bin2Ascii(time_4ch1_delta_TIM3, text);
+              delta = time_4ch1 - ten_thousand;
+              Bin2Ascii(delta, text);
               BSP_LCD_GLASS_DisplayString((uint8_t*) text);
 
               espera(3*sec);
@@ -971,6 +1008,39 @@ static void MX_TS_Init(void)
   /* USER CODE BEGIN TS_Init 2 */
 
   /* USER CODE END TS_Init 2 */
+
+}
+
+/**
+  * @brief USART3 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_USART3_UART_Init(void)
+{
+
+  /* USER CODE BEGIN USART3_Init 0 */
+
+  /* USER CODE END USART3_Init 0 */
+
+  /* USER CODE BEGIN USART3_Init 1 */
+
+  /* USER CODE END USART3_Init 1 */
+  huart3.Instance = USART3;
+  huart3.Init.BaudRate = 115200;
+  huart3.Init.WordLength = UART_WORDLENGTH_8B;
+  huart3.Init.StopBits = UART_STOPBITS_1;
+  huart3.Init.Parity = UART_PARITY_NONE;
+  huart3.Init.Mode = UART_MODE_TX_RX;
+  huart3.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart3.Init.OverSampling = UART_OVERSAMPLING_16;
+  if (HAL_UART_Init(&huart3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN USART3_Init 2 */
+
+  /* USER CODE END USART3_Init 2 */
 
 }
 

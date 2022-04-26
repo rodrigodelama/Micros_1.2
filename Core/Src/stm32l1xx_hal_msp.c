@@ -182,8 +182,6 @@ void HAL_LCD_MspInit(LCD_HandleTypeDef* hlcd)
     PA9     ------> LCD_COM1
     PA10     ------> LCD_COM2
     PA15     ------> LCD_SEG17
-    PC10     ------> LCD_SEG28
-    PC11     ------> LCD_SEG29
     PB3     ------> LCD_SEG7
     PB4     ------> LCD_SEG8
     PB5     ------> LCD_SEG9
@@ -191,8 +189,7 @@ void HAL_LCD_MspInit(LCD_HandleTypeDef* hlcd)
     PB9     ------> LCD_COM3
     */
     GPIO_InitStruct.Pin = SEG14_Pin|SEG15_Pin|SEG16_Pin|SEG17_Pin
-                          |SEG18_Pin|SEG19_Pin|SEG20_Pin|SEG21_Pin
-                          |SEG22_Pin|SEG23_Pin;
+                          |SEG18_Pin|SEG19_Pin|SEG20_Pin|SEG21_Pin;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -261,8 +258,6 @@ void HAL_LCD_MspDeInit(LCD_HandleTypeDef* hlcd)
     PA9     ------> LCD_COM1
     PA10     ------> LCD_COM2
     PA15     ------> LCD_SEG17
-    PC10     ------> LCD_SEG28
-    PC11     ------> LCD_SEG29
     PB3     ------> LCD_SEG7
     PB4     ------> LCD_SEG8
     PB5     ------> LCD_SEG9
@@ -270,8 +265,7 @@ void HAL_LCD_MspDeInit(LCD_HandleTypeDef* hlcd)
     PB9     ------> LCD_COM3
     */
     HAL_GPIO_DeInit(GPIOC, SEG14_Pin|SEG15_Pin|SEG16_Pin|SEG17_Pin
-                          |SEG18_Pin|SEG19_Pin|SEG20_Pin|SEG21_Pin
-                          |SEG22_Pin|SEG23_Pin);
+                          |SEG18_Pin|SEG19_Pin|SEG20_Pin|SEG21_Pin);
 
     HAL_GPIO_DeInit(GPIOA, SEG0_Pin|SEG1_Pin|SEG2_Pin|COM0_Pin
                           |COM1_Pin|COM2_Pin|SEG12_Pin);
@@ -410,6 +404,71 @@ void HAL_TIM_Base_MspDeInit(TIM_HandleTypeDef* htim_base)
   /* USER CODE BEGIN TIM4_MspDeInit 1 */
 
   /* USER CODE END TIM4_MspDeInit 1 */
+  }
+
+}
+
+/**
+* @brief UART MSP Initialization
+* This function configures the hardware resources used in this example
+* @param huart: UART handle pointer
+* @retval None
+*/
+void HAL_UART_MspInit(UART_HandleTypeDef* huart)
+{
+  GPIO_InitTypeDef GPIO_InitStruct = {0};
+  if(huart->Instance==USART3)
+  {
+  /* USER CODE BEGIN USART3_MspInit 0 */
+
+  /* USER CODE END USART3_MspInit 0 */
+    /* Peripheral clock enable */
+    __HAL_RCC_USART3_CLK_ENABLE();
+
+    __HAL_RCC_GPIOC_CLK_ENABLE();
+    /**USART3 GPIO Configuration
+    PC10     ------> USART3_TX
+    PC11     ------> USART3_RX
+    */
+    GPIO_InitStruct.Pin = GPIO_PIN_10|GPIO_PIN_11;
+    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+    GPIO_InitStruct.Alternate = GPIO_AF7_USART3;
+    HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+
+  /* USER CODE BEGIN USART3_MspInit 1 */
+
+  /* USER CODE END USART3_MspInit 1 */
+  }
+
+}
+
+/**
+* @brief UART MSP De-Initialization
+* This function freeze the hardware resources used in this example
+* @param huart: UART handle pointer
+* @retval None
+*/
+void HAL_UART_MspDeInit(UART_HandleTypeDef* huart)
+{
+  if(huart->Instance==USART3)
+  {
+  /* USER CODE BEGIN USART3_MspDeInit 0 */
+
+  /* USER CODE END USART3_MspDeInit 0 */
+    /* Peripheral clock disable */
+    __HAL_RCC_USART3_CLK_DISABLE();
+
+    /**USART3 GPIO Configuration
+    PC10     ------> USART3_TX
+    PC11     ------> USART3_RX
+    */
+    HAL_GPIO_DeInit(GPIOC, GPIO_PIN_10|GPIO_PIN_11);
+
+  /* USER CODE BEGIN USART3_MspDeInit 1 */
+
+  /* USER CODE END USART3_MspDeInit 1 */
   }
 
 }

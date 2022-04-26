@@ -123,10 +123,6 @@ void Error_Handler(void);
 #define SWCLK_GPIO_Port GPIOA
 #define SEG12_Pin GPIO_PIN_15
 #define SEG12_GPIO_Port GPIOA
-#define SEG22_Pin GPIO_PIN_10
-#define SEG22_GPIO_Port GPIOC
-#define SEG23_Pin GPIO_PIN_11
-#define SEG23_GPIO_Port GPIOC
 #define SEG3_Pin GPIO_PIN_3
 #define SEG3_GPIO_Port GPIOB
 #define SEG4_Pin GPIO_PIN_4
