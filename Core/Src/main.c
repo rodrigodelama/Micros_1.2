@@ -80,6 +80,9 @@ unsigned int high_limit_randn;
 unsigned int countdown;
 unsigned int potentiometer_value = 1; //FIXME: delete to make sure the pottentiometer actually works later
 unsigned int prev_potentiometer_value = 0;
+unsigned int adc_value;
+unsigned int x;
+unsigned int y;
 
 unsigned int timeout_time = 0;
 unsigned int timer_count_limit = 0;
@@ -551,7 +554,15 @@ int main(void)
               TIM3->EGR |= BIT_0;   //UG = 1 -> Generate an update event to update all registers
               TIM3->SR = 0;         //Clear counter flags
 
-              potentiometer_value = 2; //FIXME: delete later
+              adc_value = ADC1->DR; //FIXME: delete later
+
+              //this strucutr runs before each game, if value changed
+              //x = ;
+              //y = ;
+              if (adc_value < x) potentiometer_value = 1;
+              else if (adc_value > y) potentiometer_value = 3;
+              else potentiometer_value = 2;
+
               switch(potentiometer_value)
               {
                   case 1:
