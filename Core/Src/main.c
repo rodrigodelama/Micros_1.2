@@ -355,6 +355,7 @@ int main(void)
   //TIM2->CR1 |= 0x0001; //Timer on toggle
   //TIM2->EGR |= 0x0001; //Update event
   //TIM2->SR = 0; //Clear previous flags initially
+
 /*
 
 Supposed to initialize tim2 towards pwm funct.
@@ -375,7 +376,7 @@ Supposed to initialize tim2 towards pwm funct.
  TIM2->CR1 |= 0x0001;
  TIM2->EGR |= 0x
 
-
+*/
 
 
   //ADC & Buzzer
@@ -526,8 +527,14 @@ Supposed to initialize tim2 towards pwm funct.
         break;
 
         case 2: //GAME 2 - COUNTDOWN
-          while (game == 2)
+          //TODO:
+          if (prev_potentiometer_value != potentiometer_value)
           {
+            //TODO: verify
+            prev_potentiometer_value = potentiometer_value;
+            potentiometer_value = ADC1->DR;
+            while (game == 2)
+            {
             //TODO:COUNTDOWN GAME
             //Users are displayed a countdown in real time from 10 to 0
             //At a random time (a while before 0 - use TIM3 with rand up to 10)
@@ -546,12 +553,6 @@ Supposed to initialize tim2 towards pwm funct.
             ADC1->CR2 |= 0x40000000; // When ADCONS = 1, start conversion (SWSTART = 1)
             */
             
-            //TODO:
-            if (prev_potentiometer_value != potentiometer_value)
-            {
-              //TODO: verify
-              prev_potentiometer_value = potentiometer_value;
-              potentiometer_value = ADC1->DR;
 
               BSP_LCD_GLASS_Clear();
               BSP_LCD_GLASS_DisplayString((uint8_t*)" GAME2");
@@ -577,7 +578,9 @@ Supposed to initialize tim2 towards pwm funct.
               TIM3->EGR |= BIT_0;   //UG = 1 -> Generate an update event to update all registers
               TIM3->SR = 0;         //Clear counter flags
 
-              switch(1)
+              //FIXME: delete later
+              potentiometer_value = 1;
+              switch(potentiometer_value)
               {
                   case 1:
                     high_limit_randn = 4500;
@@ -601,7 +604,7 @@ Supposed to initialize tim2 towards pwm funct.
 
               TIM4->CR1 |= BIT_0;
               TIM4->EGR |= BIT_0;
-              
+
               while (btn_pressed == 0)
               {
 
@@ -612,9 +615,9 @@ Supposed to initialize tim2 towards pwm funct.
 
                   //TODO: modification for checkpoint 3
                   //a switch that makes the countdown decrease in steps of 0.5s, 1s and 2s (display 10, 9, 8...)
-                  switch(1)
+                  switch(potentiometer_value)
                   {
-                    case 1: //lowest position 
+                    case 1: //lowest position
                       if(countdown%500 != 0) break; //inverse guard clause
                       countdown /= 500;
                       Bin2Ascii(countdown, text);
@@ -662,7 +665,6 @@ Supposed to initialize tim2 towards pwm funct.
                 {
                   BSP_LCD_GLASS_DisplayString((uint8_t*) "  END");
                   espera(2*sec);
-                  BSP_LCD_GLASS_Clear();
                   break; //if no one pressed, break
                 }
                 //Grace period of 2secs from countdown reaching 0, if not automatically the only player to click will win
@@ -726,7 +728,7 @@ Supposed to initialize tim2 towards pwm funct.
                 }
                 BSP_LCD_GLASS_DisplayString((uint8_t*) text);
 
-                espera(3*sec); //wait so the player acknowledges their win
+                espera(2*sec); //wait so the player acknowledges their win
                 GPIOA->BSRR = (1 << 12) << 16; //Turn off winners LED after win
               }
               else if (winner == 2)
@@ -747,11 +749,11 @@ Supposed to initialize tim2 towards pwm funct.
                 }
                 BSP_LCD_GLASS_DisplayString((uint8_t*) text);
 
-                espera(3*sec);
+                espera(2*sec);
                 GPIOD->BSRR = (1 << 2) << 16;
               }
             }
-          }
+          } //END OF GAME2
         break;
 
         //This code below should be unreachable on purpose
