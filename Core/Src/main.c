@@ -372,8 +372,6 @@ int main(void)
                               // CONT = 1 (continuous conversion)
   ADC1->SQR1 = 0x00000000;    // Set to 0 - activates 1 channel
   ADC1->SQR5 = 0x00000004;    // Selected channel is AIN4
-  //while ((ADC1->SR&0x0040)==0); // If ADCONS = 0, I wait till converter is ready
-  //ADC1->CR2 |= 0x40000000; // When ADCONS = 1, I start conversion (SWSTART = 1)
 
   /* BUZZER -------------------------------------------------------------------*/
   //PA5 as AF because we want it as PWM (send different frequencies at different points)
@@ -554,11 +552,14 @@ int main(void)
               TIM3->EGR |= BIT_0;   //UG = 1 -> Generate an update event to update all registers
               TIM3->SR = 0;         //Clear counter flags
 
-              adc_value = ADC1->DR; //FIXME: delete later
+              while ((ADC1->SR &0x0040) == 0); // If ADCONS = 0, I wait till converter is ready
+              ADC1->CR2 |= 0x40000000; // When ADCONS = 1, I start conversion (SWSTART = 1)
+              while ((ADC1->SR &0x2) == 0); //While EOC is not flagged, wait
+              adc_value = ADC1->DR; //Assign value after successfull conversion
 
               //this strucutr runs before each game, if value changed
-              //x = ;
-              //y = ;
+              x = 21000;
+              y = 22000;
               if (adc_value < x) potentiometer_value = 1;
               else if (adc_value > y) potentiometer_value = 3;
               else potentiometer_value = 2;
