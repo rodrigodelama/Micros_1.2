@@ -716,17 +716,17 @@ Supposed to initialize tim2 towards pwm funct.
                 //Depending on the step value we must calculate the time delta
                 delta = timer_count_limit - time_4ch2;
                 Bin2Ascii(delta, text);
+                BSP_LCD_GLASS_DisplayString((uint8_t*) text);
                 if(TIM3->CNT < timer_count_limit)
                 {
                   //PLAY MELODY 1 (player pressed before end of countdown)
-                  text[1] = (uint8_t) "-"; //(uint8_t*) "-";
+                  BSP_LCD_GLASS_DisplayString((uint8_t*) " -");
                 }
                 else
                 {
                   //PLAY MELODY 2 (player pressed before end of countdown)
-                  text[1] = (uint8_t) "+";
+                  BSP_LCD_GLASS_DisplayString((uint8_t*) " +");
                 }
-                BSP_LCD_GLASS_DisplayString((uint8_t*) text);
 
                 espera(2*sec); //wait so the player acknowledges their win
                 GPIOA->BSRR = (1 << 12) << 16; //Turn off winners LED after win
@@ -740,12 +740,12 @@ Supposed to initialize tim2 towards pwm funct.
                 if(TIM3->CNT < timer_count_limit)
                 {
                   //PLAY MELODY 1
-                  text[1] = (uint8_t*) "-";
+                  BSP_LCD_GLASS_DisplayString((uint8_t*) " -");
                 }
                 else
                 {
                   //PLAY MELODY 2
-                  text[1] = (uint8_t*) "+";
+                  BSP_LCD_GLASS_DisplayString((uint8_t*) " +");
                 }
                 BSP_LCD_GLASS_DisplayString((uint8_t*) text);
 
