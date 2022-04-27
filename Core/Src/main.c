@@ -169,7 +169,7 @@ void TIM4_IRQHandler(void)
   if((TIM4->SR &BIT_1) != 0) //0x2
   {
     time_4ch1 = TIM4->CCR1; //The time loaded to our var shall be the count when the button was clicked
-    if(time_4ch1 < 0) time_4ch1 += 0x0FFFF; //FIXME: why do we add this? DELETE COMMENT LATER
+    if(time_4ch1 < 0) time_4ch1 += 0x0FFFF; //FIXME: avoids impossible negative times ?? - grabbed from ENG_08_Solutions_Timers_v4.pdf, exercise 6
   }
   //CH2 for PB7 - Player 1
   if((TIM4->SR &BIT_2) != 0) //0x4
