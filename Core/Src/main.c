@@ -131,7 +131,7 @@ void EXTI9_5_IRQHandler(void) //ISR for EXTI7 & EXTI6
     {
       if ((game == 1) && (playing == 1))
       {
-        GPIOA->BSRR = (1 << 12) << 16;
+        GPIOA->BSRR = (1 << 12) << 16; //Turn off LED
         playing = 0;
         winner = 1;
       }
@@ -372,6 +372,7 @@ int main(void)
                               // CONT = 1 (continuous conversion)
   ADC1->SQR1 = 0x00000000;    // Set to 0 - activates 1 channel
   ADC1->SQR5 = 0x00000004;    // Selected channel is AIN4
+  ADC1->CR2 |= 0x00000001; // ADON = 1 (ADC powered on)
 
   /* BUZZER -------------------------------------------------------------------*/
   //PA5 as AF because we want it as PWM (send different frequencies at different points)
@@ -504,29 +505,31 @@ int main(void)
         break;
 
         case 2: //GAME 2 - COUNTDOWN
+        /*
           if (prev_potentiometer_value != potentiometer_value)
           {
             //TODO: verify if statement
             prev_potentiometer_value = potentiometer_value;
-            potentiometer_value = ADC1->DR;
+            //potentiometer_value = ADC1->DR;
+        */
             while (game == 2)
             {
-            //Users are displayed a countdown in real time from 10 to 0
-            //At a random time (a while before 0 - use TIM3 with rand up to 10)
-            //the countdown will STOP being displayed
-            //The players have to attempt to press the button when the countdown reaches 0
+              //Users are displayed a countdown in real time from 10 to 0
+              //At a random time (a while before 0 - use TIM3 with rand up to 10)
+              //the countdown will STOP being displayed
+              //The players have to attempt to press the button when the countdown reaches 0
 
-            //The player with the closest time delta to 0 will win, and their LED will light up
-            //Pressing before the countdown ends will result in displaying -XXXX time left
-            //Pressing after the countdown ends will result in displaying +XXXX time passed
-            //The player to have the closest absolute value to 0, wins
+              //The player with the closest time delta to 0 will win, and their LED will light up
+              //Pressing before the countdown ends will result in displaying -XXXX time left
+              //Pressing after the countdown ends will result in displaying +XXXX time passed
+              //The player to have the closest absolute value to 0, wins
 
-            //FIXME: Add to code for checkpoint 3
-            /**
-            ADC1->CR2 |= 0x00000001; // ADON = 1 (ADC powered on)
-            while ((ADC1->SR&0x0040)==0); // If ADCONS = 0, wait until converter is ready
-            ADC1->CR2 |= 0x40000000; // When ADCONS = 1, start conversion (SWSTART = 1)
-            */
+              //FIXME: Add to code for checkpoint 3
+              /**
+              ADC1->CR2 |= 0x00000001; // ADON = 1 (ADC powered on)
+              while ((ADC1->SR&0x0040)==0); // If ADCONS = 0, wait until converter is ready
+              ADC1->CR2 |= 0x40000000; // When ADCONS = 1, start conversion (SWSTART = 1)
+              */
 
               BSP_LCD_GLASS_Clear();
               BSP_LCD_GLASS_DisplayString((uint8_t*)" GAME2");
@@ -547,19 +550,24 @@ int main(void)
               timer_count_limit = 0;
               timeout_time = 0;
 
+              while ((ADC1->SR &0x0040) == 0); // If ADCONS = 0, I wait till converter is ready
+              ADC1->CR2 |= 0x40000000; // When ADCONS = 1, I start conversion (SWSTART = 1)
+              while ((ADC1->SR &0x2) == 0); //While EOC is not flagged, wait
+              adc_value = ADC1->DR; //Assign value after successfull conversion
+              
+              //Testing check
+              Bin2Ascii(adc_value, text);
+              BSP_LCD_GLASS_DisplayString((uint8_t*) text);
+              espera(2*sec);
+
               //Start counters
               TIM3->CR1 |= BIT_0;   //Set CEN = 1, Starts the counter
               TIM3->EGR |= BIT_0;   //UG = 1 -> Generate an update event to update all registers
               TIM3->SR = 0;         //Clear counter flags
 
-              while ((ADC1->SR &0x0040) == 0); // If ADCONS = 0, I wait till converter is ready
-              ADC1->CR2 |= 0x40000000; // When ADCONS = 1, I start conversion (SWSTART = 1)
-              while ((ADC1->SR &0x2) == 0); //While EOC is not flagged, wait
-              adc_value = ADC1->DR; //Assign value after successfull conversion
-
-              //this strucutr runs before each game, if value changed
-              x = 21000;
-              y = 22000;
+              //This strucutre runs before each game, the idea is if value changes it should force a restart
+              x = 1000;
+              y = 2000;
               if (adc_value < x) potentiometer_value = 1;
               else if (adc_value > y) potentiometer_value = 3;
               else potentiometer_value = 2;
@@ -745,7 +753,7 @@ int main(void)
                 TIM2->SR = 0;
               }
             }
-          } //END OF GAME2
+          //} //END OF GAME2
         break;
 
         //This code below should be unreachable on purpose
