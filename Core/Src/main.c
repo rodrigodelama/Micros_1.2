@@ -353,32 +353,6 @@ int main(void)
                         //bit14-12 OC1M to 110 - PWM with the cycle starting at 1
                         //bi11 OC1PE to 1 - the CCR1 value will be updated after an update event
   TIM2->CCER = 0x0001;  //Enables the hardware output of TIM2_CH1
-  //TODO:
-  //Activate below in code when buzzer needs to function ??
-  //TIM2->CR1 |= 0x0001; //Timer on toggle
-  //TIM2->EGR |= 0x0001; //Update event
-  TIM2->SR = 0; //Clear previous flags initially
-
-/*
-DONE DELETE NEXT COMMIT
-Supposed to initialize tim2 towards pwm funct.
-
- TIM2->CR1 = 0;
- TIM2->CR1 |= (1<<7);
- TIM2->CR2 = 0;
- TIM2->SMCR = 0;
- TIM2->PSC = 31999;
- TIM2->CNT = 0;
- TIM2->ARR = PERIODO;
- TIM2->CCR1 = DC;
- TIM2->DIER = 0x0000;
- TIM2->CCMR1 &= ~(0x0FF << (8*0));
- TIM2->CCMR1 |= ((6 << 4)|(1<<3));
- TIM2->CCER &= ~(0x0F << 0);
- TIM2->CCER |= (1 << 0);
- TIM2->CR1 |= 0x0001;
- TIM2->EGR |= 0x
-*/
 
   //ADC & Buzzer
   /* ADC_IN4 ------------------------------------------------------------------*/
@@ -397,7 +371,6 @@ Supposed to initialize tim2 towards pwm funct.
   ADC1->SQR5 = 0x00000004;    // Selected channel is AIN4
   //while ((ADC1->SR&0x0040)==0); // If ADCONS = 0, I wait till converter is ready
   //ADC1->CR2 |= 0x40000000; // When ADCONS = 1, I start conversion (SWSTART = 1)
-  //NVIC->ISER[0] |= (1 << 18); //not sure if needed
 
   /* BUZZER -------------------------------------------------------------------*/
   //PA5 as AF because we want it as PWM (send different frequencies at different points)
@@ -530,15 +503,13 @@ Supposed to initialize tim2 towards pwm funct.
         break;
 
         case 2: //GAME 2 - COUNTDOWN
-          //TODO:
           if (prev_potentiometer_value != potentiometer_value)
           {
-            //TODO: verify
+            //TODO: verify if statement
             prev_potentiometer_value = potentiometer_value;
             potentiometer_value = ADC1->DR;
             while (game == 2)
             {
-            //TODO:COUNTDOWN GAME
             //Users are displayed a countdown in real time from 10 to 0
             //At a random time (a while before 0 - use TIM3 with rand up to 10)
             //the countdown will STOP being displayed
@@ -555,7 +526,6 @@ Supposed to initialize tim2 towards pwm funct.
             while ((ADC1->SR&0x0040)==0); // If ADCONS = 0, wait until converter is ready
             ADC1->CR2 |= 0x40000000; // When ADCONS = 1, start conversion (SWSTART = 1)
             */
-            
 
               BSP_LCD_GLASS_Clear();
               BSP_LCD_GLASS_DisplayString((uint8_t*)" GAME2");
@@ -581,8 +551,7 @@ Supposed to initialize tim2 towards pwm funct.
               TIM3->EGR |= BIT_0;   //UG = 1 -> Generate an update event to update all registers
               TIM3->SR = 0;         //Clear counter flags
 
-              //FIXME: delete later
-              potentiometer_value = 2;
+              potentiometer_value = 2; //FIXME: delete later
               switch(potentiometer_value)
               {
                   case 1:
@@ -610,18 +579,16 @@ Supposed to initialize tim2 towards pwm funct.
 
               while (btn_pressed == 0)
               {
-
                 while ((TIM3->SR &0x0002) == 0) /*Keep displaying digits while CNT is not reached*/
                 {
                   time_3 = TIM3->CNT;
                   countdown = timer_count_limit - time_3;
 
-                  //TODO: modification for checkpoint 3
-                  //a switch that makes the countdown decrease in steps of 0.5s, 1s and 2s (display 10, 9, 8...)
+                  //For checkpoint 3 - a switch that makes the countdown decrease in steps of 0.5s, 1s and 2s (displaying all whole nums: 10, 9, 8...)
                   switch(potentiometer_value)
                   {
-                    case 1: //lowest position
-                      if(countdown%500 != 0) break; //inverse guard clause
+                    case 1: //lowest potentiometer position
+                      if(countdown%500 != 0) break; // Guard clause - if not met, break, if met, allow folling code to execute 
                       countdown /= 500;
                       Bin2Ascii(countdown, text);
                       BSP_LCD_GLASS_DisplayString((uint8_t*) text);
@@ -684,7 +651,6 @@ Supposed to initialize tim2 towards pwm funct.
                     break;
                   }
                 }
-                //if (TIM3->CNT > timeout_time) break;
               }
 
               if(time_4ch1 == time_4ch2) //unlikely but maybe still a possibility
@@ -706,8 +672,6 @@ Supposed to initialize tim2 towards pwm funct.
               {
                 winner = 2;
               }
-              
-              //TODO: check downloaded code from buzzer/src, stablish functionality and diff freqs.
 
               if (winner == 1)
               {
@@ -716,12 +680,13 @@ Supposed to initialize tim2 towards pwm funct.
                 //Pressing before the countdown ends will result in displaying -XXXX time left
                 //Pressing after the countdown ends will result in displaying +XXXX time passed
 
-                //Depending on the step value we must calculate the time delta
+                //Depending on the max value we must calculate the time delta
                 delta = timer_count_limit - time_4ch2;
                 Bin2Ascii(delta, text);
                 BSP_LCD_GLASS_DisplayString((uint8_t*) text);
                 if(time_4ch2 < timer_count_limit)
                 {
+                  //TODO: check downloaded code from buzzer/src, stablish functionality and diff freqs.
                   //PLAY MELODY 1 (player pressed before end of countdown)
                   //TIM2->CR1 |= 0x0001; //Timer on toggle
                   //TIM2->EGR |= 0x0001; //Update event
