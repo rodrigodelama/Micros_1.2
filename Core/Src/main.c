@@ -568,13 +568,16 @@ Supposed to initialize tim2 towards pwm funct.
               btn_pressed = 0;
               time_4ch1 = 0;
               time_4ch2 = 0;
+              high_limit_randn = 0;
+              timer_count_limit = 0;
+              timeout_time = 0;
 
               //Start counters
               TIM3->CR1 |= BIT_0;   //Set CEN = 1, Starts the counter
               TIM3->EGR |= BIT_0;   //UG = 1 -> Generate an update event to update all registers
               TIM3->SR = 0;         //Clear counter flags
 
-              switch(potentiometer_value)
+              switch(1)
               {
                   case 1:
                     high_limit_randn = 4500;
@@ -609,7 +612,7 @@ Supposed to initialize tim2 towards pwm funct.
 
                   //TODO: modification for checkpoint 3
                   //a switch that makes the countdown decrease in steps of 0.5s, 1s and 2s (display 10, 9, 8...)
-                  switch(potentiometer_value)
+                  switch(1)
                   {
                     case 1: //lowest position 
                       if(countdown%500 != 0) break; //inverse guard clause
@@ -659,7 +662,8 @@ Supposed to initialize tim2 towards pwm funct.
                 {
                   BSP_LCD_GLASS_DisplayString((uint8_t*) "  END");
                   espera(2*sec);
-                  break; //if no one pressed break
+                  BSP_LCD_GLASS_Clear();
+                  break; //if no one pressed, break
                 }
                 //Grace period of 2secs from countdown reaching 0, if not automatically the only player to click will win
                 if (TIM3->CNT > timeout_time)
@@ -675,6 +679,7 @@ Supposed to initialize tim2 towards pwm funct.
                     break;
                   }
                 }
+                //if (TIM3->CNT > timeout_time) break;
               }
 
               if(time_4ch1 == time_4ch2) //unlikely but maybe still a possibility
