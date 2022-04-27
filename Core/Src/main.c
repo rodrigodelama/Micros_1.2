@@ -78,8 +78,7 @@ unsigned int low_limit_randn = 500;
 unsigned int high_limit_randn;
 
 unsigned int countdown;
-unsigned int potentiometer_value = 1; //FIXME: delete to make sure the pottentiometer actually works later
-unsigned int prev_potentiometer_value = 0;
+unsigned int potentiometer_value;
 unsigned int adc_value;
 unsigned int x;
 unsigned int y;
@@ -89,7 +88,7 @@ unsigned int timer_count_limit = 0;
 
 uint8_t text[6]; //ASCII character array to output in the Discovery LCD
 
-short duty_cycle = 1;
+short duty_cycle = 1; //TODO:
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -164,7 +163,7 @@ void EXTI9_5_IRQHandler(void) //ISR for EXTI7 & EXTI6
 
 //TIMERS
 //TIC timer 4 CH1 and CH2
-void TIM4_IRQHandler(void) //TIC
+void TIM4_IRQHandler(void)
 {
   //CH1 for PB6 - Player 2
   if((TIM4->SR &BIT_1) != 0) //0x2
@@ -188,21 +187,10 @@ void ADC1_IRQHandler(void)
   ADC1->SR &= ~(1 << 1); //what does this do (EOC to 0, meaning we have work to do yet)
 
   if ((ADC1->SQR5 &0x001F) == 1)
-  {
     ADC1->SQR5 = 0x05;
-    /*
-    if (ADC->DR > 67) obstacle_IN = 1;
-    else obstacle_IN = 0;
-    */
-  }
   else if ((ADC1->SQR5 &0x001F) == 5)
-  {
     ADC1->SQR5 = 0x01;
-    /*
-    if (ADC->DR > 67) obstacle_OUT = 1;
-    else obstacle_OUT = 0;
-    */
-  }
+
 }
 
 /* USER CODE END 0 */
@@ -214,7 +202,7 @@ void ADC1_IRQHandler(void)
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-
+  //GPIO_InitTypeDef GPIO_InitStruct; //For corrrect USART3 implementation with pins PC10 and PC11
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -249,6 +237,16 @@ int main(void)
   BSP_LCD_GLASS_Init();
   BSP_LCD_GLASS_BarLevelConfig(0);
   BSP_LCD_GLASS_Clear();
+  /** //For corrrect USART3 implementation with pins PC10 and PC11
+    GPIO_InitStruct.Pin = GPIO_PIN_10;
+    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pull = GPIO_PULLUP;
+    GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
+    GPIO_InitStruct.Alternate = GPIO_AF7_USART2;
+    HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+    GPIO_InitStruct.Pin = GPIO_PIN_11;
+    HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+   */
 
   //Pins + their EXTIs - I/O
   /* PB0 ---------------------------------------------------------------------*/
@@ -264,7 +262,7 @@ int main(void)
 
   //USING I/O PINS 7 & 6 FOR PLAYER BUTTONS 1 & 2 RESPECTIVELY
   /* PB7 ---------------------------------------------------------------------*/
-  //PB7 (BUTTON 1) - digital input (00) - w7 AF TIM4_CH2
+  //PB7 (BUTTON 1) - digital input (00) - w/ AF TIM4_CH2
   //Set PB7 to 10 for Alternate Functions (AFs)
   GPIOB->MODER |= (1 << (7*2 + 1));
   GPIOB->MODER &= ~(1 << (7*2));
@@ -339,6 +337,7 @@ int main(void)
                         //CCyE = 1 (input capture enabled)
   NVIC->ISER[0] |= (1 << 30); //Enables IRQ source for TIM4 in NVIC (pos 30)
 
+  //FIXME:
   /* TIM2 --------------------------------------------------------------------*/
   //Assigned to PA5
   //SET-UP for TIM2_CH1 - PWM
@@ -372,7 +371,7 @@ int main(void)
                               // CONT = 1 (continuous conversion)
   ADC1->SQR1 = 0x00000000;    // Set to 0 - activates 1 channel
   ADC1->SQR5 = 0x00000004;    // Selected channel is AIN4
-  ADC1->CR2 |= 0x00000001; // ADON = 1 (ADC powered on)
+  ADC1->CR2 |= 0x00000001;    // ADON = 1 (ADC powered on)
 
   /* BUZZER -------------------------------------------------------------------*/
   //PA5 as AF because we want it as PWM (send different frequencies at different points)
@@ -397,12 +396,14 @@ int main(void)
   GPIOD->PUPDR &= ~(1 << (2*2 + 1));
   GPIOD->PUPDR |= (1 << (2*2));
 
-  //USART
+  //USART3
   /* TX -----------------------------------------------------------------------*/
   
   /* RX -----------------------------------------------------------------------*/
 
+  //for USART3
   NVIC->ISER[1] |= (1 << 7); //position 39 (for ISER[1], 0 is 32, 7 is 39)
+  
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -505,13 +506,6 @@ int main(void)
         break;
 
         case 2: //GAME 2 - COUNTDOWN
-        /*
-          if (prev_potentiometer_value != potentiometer_value)
-          {
-            //TODO: verify if statement
-            prev_potentiometer_value = potentiometer_value;
-            //potentiometer_value = ADC1->DR;
-        */
             while (game == 2)
             {
               //Users are displayed a countdown in real time from 10 to 0
@@ -523,13 +517,6 @@ int main(void)
               //Pressing before the countdown ends will result in displaying -XXXX time left
               //Pressing after the countdown ends will result in displaying +XXXX time passed
               //The player to have the closest absolute value to 0, wins
-
-              //FIXME: Add to code for checkpoint 3
-              /**
-              ADC1->CR2 |= 0x00000001; // ADON = 1 (ADC powered on)
-              while ((ADC1->SR&0x0040)==0); // If ADCONS = 0, wait until converter is ready
-              ADC1->CR2 |= 0x40000000; // When ADCONS = 1, start conversion (SWSTART = 1)
-              */
 
               BSP_LCD_GLASS_Clear();
               BSP_LCD_GLASS_DisplayString((uint8_t*)" GAME2");
@@ -565,9 +552,9 @@ int main(void)
               TIM3->EGR |= BIT_0;   //UG = 1 -> Generate an update event to update all registers
               TIM3->SR = 0;         //Clear counter flags
 
-              //This strucutre runs before each game, the idea is if value changes it should force a restart
-              x = 1000;
-              y = 2000;
+              //This strucutre runs before each game setting the countdown mode based on the value read from the potentiometer when starting the game
+              x = 1000; //1 volt
+              y = 2000; //2 volts
               if (adc_value < x) potentiometer_value = 1;
               else if (adc_value > y) potentiometer_value = 3;
               else potentiometer_value = 2;
@@ -591,7 +578,7 @@ int main(void)
                   break;
               }
               randn = random_num(low_limit_randn, high_limit_randn); //rand num between 0.5 and x seconds
-                                            //(so the players can see the game started and it doesnt finish too close to 0)
+                                //(so the players can see the game started and it doesnt finish too close to 0)
               TIM3->CCR1 = randn;
 
               TIM4->CR1 |= BIT_0;
@@ -682,7 +669,8 @@ int main(void)
               }
               else if((time_4ch1 == 0) || (time_4ch2 == 0))
               {
-                //if one of them is 0, with the code above, the only player to press automatically wins //TODO: verify the necesity of this condition
+                //If one of them is 0, with the code above, the only player to press automatically won
+                //This if statement is meant as a security measure, we discard that option and continue with the code
               }
               else if(abs(time_4ch1 - timer_count_limit) > abs(time_4ch2 - timer_count_limit)) //who is closer to timer_count_limit ??
               {
@@ -735,15 +723,15 @@ int main(void)
                 if(time_4ch1 < timer_count_limit)
                 {
                   //PLAY MELODY 1
-                  //TIM2->CR1 |= 0x0001; //Timer on toggle
-                  //TIM2->EGR |= 0x0001; //Update event
+                  //TIM2->CR1 |= 0x0001;
+                  //TIM2->EGR |= 0x0001;
                   BSP_LCD_GLASS_DisplayString((uint8_t*) " -");
                 }
                 else
                 {
                   //PLAY MELODY 2
-                  //TIM2->CR1 |= 0x0001; //Timer on toggle
-                  //TIM2->EGR |= 0x0001; //Update event
+                  //TIM2->CR1 |= 0x0001;
+                  //TIM2->EGR |= 0x0001;
                   //different step
                   BSP_LCD_GLASS_DisplayString((uint8_t*) " +");
                 }
@@ -752,8 +740,7 @@ int main(void)
                 GPIOD->BSRR = (1 << 2) << 16;
                 TIM2->SR = 0;
               }
-            }
-          //} //END OF GAME2
+            } //END OF GAME2
         break;
 
         //This code below should be unreachable on purpose
