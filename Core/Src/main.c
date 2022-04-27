@@ -583,14 +583,13 @@ int main(void)
                 while ((TIM3->SR &0x0002) == 0) /*Keep displaying digits while CNT is not reached*/
                 {
                   time_3 = TIM3->CNT;
+                  countdown = timer_count_limit - time_3;
 
                   //TODO: modification for checkpoint 3
                   //a switch that makes the countdown decrease in steps of 0.5s, 1s and 2s (display 10, 9, 8...)
                   switch(potentiometer_value)
                   {
                     case 1: //lowest position 
-                      countdown = timer_count_limit - time_3;
-
                       if(countdown%500 != 0) break; //inverse guard clause
                       countdown /= 500;
                       Bin2Ascii(countdown, text);
@@ -600,16 +599,12 @@ int main(void)
                       //To display only whole numbers (1sec increments) if the
                       //number is a multiple of 10000, divide it by 1000 and display
                       //In this case the LCD only display whole numbers (10, 9, 8, etc)
-                      countdown = timer_count_limit - time_3;
-
                       if(countdown%1000 != 0) break;
                       countdown /= 1000;
                       Bin2Ascii(countdown, text);
                       BSP_LCD_GLASS_DisplayString((uint8_t*) text);
                     break;
                     case 3: //max pos
-                      countdown = timer_count_limit - time_3;
-                      
                       if(countdown%2000 != 0) break;
                       countdown /= 2000;
                       Bin2Ascii(countdown, text);
@@ -693,7 +688,7 @@ int main(void)
                 if(TIM3->CNT < timer_count_limit)
                 {
                   //PLAY MELODY 1 (player pressed before end of countdown)
-                  text[1] = (uint8_t) "-";
+                  text[1] = (uint8_t) "-"; //(uint8_t*) "-";
                 }
                 else
                 {
@@ -708,31 +703,7 @@ int main(void)
               else if (winner == 2)
               {
                 GPIOD->BSRR = (1 << 2); //Turn on LED2 to indicate P2 won
-                /*
-                switch (potentiometer_value)
-                {
-                  case 1:
-                    delta = 5000 - 0.5*time_4ch1;
-                    timer_count_limit = 5000;
-                  break;
-                  case 2:
-                    delta = 10000 - time_4ch1;
-                    timer_count_limit = 10000;
-                  break;
-                  case 3:
-                    delta = 20000 - 2*time_4ch1;
-                    timer_count_limit = 20000;
-                  break;
-                  default:
-                    BSP_LCD_GLASS_Clear();
-                    BSP_LCD_GLASS_DisplayString((uint8_t*)" ERROR");
-                    espera(2*sec);
-                    BSP_LCD_GLASS_Clear();
-                    BSP_LCD_GLASS_DisplayString((uint8_t*)" RESET");
-                    espera(2*sec);
-                  break;
-                }
-                */
+
                 delta = timer_count_limit - time_4ch1;
                 Bin2Ascii(delta, text);
                 if(TIM3->CNT < timer_count_limit)
