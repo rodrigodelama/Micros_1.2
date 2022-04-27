@@ -339,9 +339,12 @@ int main(void)
   /* TIM2 --------------------------------------------------------------------*/
   //Assigned to PA5
   //SET-UP for TIM2_CH1 - PWM
-  TIM2->CR1 = 0x0080; //(ARPE=1, CEN=0: timer not counting yet)
+  TIM2->CR1 = 0x0080;   //(ARPE=1, CEN=0: timer not counting yet)
   TIM2->CR2 = 0x0000;   //Always set to 0 in this course
   TIM2->SMCR = 0x0000;  //Always set to 0 in this course
+  //PSC, CNT, ARR AND CCRx
+  TIM2->PSC = 31999;
+  TIM2->CNT = 0;
   //TIM2->ARR = X; //Value that when reached by CNT, resets CNT back to 0
   TIM2->CCR1 = duty_cycle;
   TIM2->DIER = 0X0000;
@@ -354,17 +357,17 @@ int main(void)
   //Activate below in code when buzzer needs to function ??
   //TIM2->CR1 |= 0x0001; //Timer on toggle
   //TIM2->EGR |= 0x0001; //Update event
-  //TIM2->SR = 0; //Clear previous flags initially
+  TIM2->SR = 0; //Clear previous flags initially
 
 /*
-
+DONE DELETE NEXT COMMIT
 Supposed to initialize tim2 towards pwm funct.
 
  TIM2->CR1 = 0;
  TIM2->CR1 |= (1<<7);
  TIM2->CR2 = 0;
  TIM2->SMCR = 0;
- TIM2->PSC = 3199;
+ TIM2->PSC = 31999;
  TIM2->CNT = 0;
  TIM2->ARR = PERIODO;
  TIM2->CCR1 = DC;
@@ -375,9 +378,7 @@ Supposed to initialize tim2 towards pwm funct.
  TIM2->CCER |= (1 << 0);
  TIM2->CR1 |= 0x0001;
  TIM2->EGR |= 0x
-
 */
-
 
   //ADC & Buzzer
   /* ADC_IN4 ------------------------------------------------------------------*/
@@ -394,14 +395,16 @@ Supposed to initialize tim2 towards pwm funct.
                               // CONT = 1 (continuous conversion)
   ADC1->SQR1 = 0x00000000;    // Set to 0 - activates 1 channel
   ADC1->SQR5 = 0x00000004;    // Selected channel is AIN4
-  NVIC->ISER[0] |= (1 << 18);
+  //while ((ADC1->SR&0x0040)==0); // If ADCONS = 0, I wait till converter is ready
+  //ADC1->CR2 |= 0x40000000; // When ADCONS = 1, I start conversion (SWSTART = 1)
+  //NVIC->ISER[0] |= (1 << 18); //not sure if needed
 
   /* BUZZER -------------------------------------------------------------------*/
   //PA5 as AF because we want it as PWM (send different frequencies at different points)
   GPIOA->MODER |= (1 << (5*2 + 1));
   GPIOA->MODER &= ~(1 << (5*2));
   //AF for TIM2_CH1
-  GPIOB->AFR[0] |= (0x01 << (5*4)); // Writes 0010 in AFRL5
+  GPIOA->AFR[0] |= (0x02 << (5*4)); // Writes 0010 in AFRL5
 
   //LEDs
   /* LED1 ---------------------------------------------------------------------*/
@@ -579,7 +582,7 @@ Supposed to initialize tim2 towards pwm funct.
               TIM3->SR = 0;         //Clear counter flags
 
               //FIXME: delete later
-              potentiometer_value = 1;
+              potentiometer_value = 2;
               switch(potentiometer_value)
               {
                   case 1:
@@ -717,19 +720,25 @@ Supposed to initialize tim2 towards pwm funct.
                 delta = timer_count_limit - time_4ch2;
                 Bin2Ascii(delta, text);
                 BSP_LCD_GLASS_DisplayString((uint8_t*) text);
-                if(TIM3->CNT < timer_count_limit)
+                if(time_4ch2 < timer_count_limit)
                 {
                   //PLAY MELODY 1 (player pressed before end of countdown)
+                  //TIM2->CR1 |= 0x0001; //Timer on toggle
+                  //TIM2->EGR |= 0x0001; //Update event
                   BSP_LCD_GLASS_DisplayString((uint8_t*) " -");
                 }
                 else
                 {
                   //PLAY MELODY 2 (player pressed before end of countdown)
+                  //TIM2->CR1 |= 0x0001;
+                  //TIM2->EGR |= 0x0001;
+                  //use different increasing step (double the frequencies to change octave)
                   BSP_LCD_GLASS_DisplayString((uint8_t*) " +");
                 }
 
                 espera(2*sec); //wait so the player acknowledges their win
                 GPIOA->BSRR = (1 << 12) << 16; //Turn off winners LED after win
+                TIM2->SR = 0;
               }
               else if (winner == 2)
               {
@@ -737,20 +746,26 @@ Supposed to initialize tim2 towards pwm funct.
 
                 delta = timer_count_limit - time_4ch1;
                 Bin2Ascii(delta, text);
-                if(TIM3->CNT < timer_count_limit)
+                BSP_LCD_GLASS_DisplayString((uint8_t*) text);
+                if(time_4ch1 < timer_count_limit)
                 {
                   //PLAY MELODY 1
+                  //TIM2->CR1 |= 0x0001; //Timer on toggle
+                  //TIM2->EGR |= 0x0001; //Update event
                   BSP_LCD_GLASS_DisplayString((uint8_t*) " -");
                 }
                 else
                 {
                   //PLAY MELODY 2
+                  //TIM2->CR1 |= 0x0001; //Timer on toggle
+                  //TIM2->EGR |= 0x0001; //Update event
+                  //different step
                   BSP_LCD_GLASS_DisplayString((uint8_t*) " +");
                 }
-                BSP_LCD_GLASS_DisplayString((uint8_t*) text);
 
                 espera(2*sec);
                 GPIOD->BSRR = (1 << 2) << 16;
+                TIM2->SR = 0;
               }
             }
           } //END OF GAME2
