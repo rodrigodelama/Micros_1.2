@@ -355,6 +355,28 @@ int main(void)
   //TIM2->CR1 |= 0x0001; //Timer on toggle
   //TIM2->EGR |= 0x0001; //Update event
   //TIM2->SR = 0; //Clear previous flags initially
+/*
+
+Supposed to initialize tim2 towards pwm funct.
+
+ TIM2->CR1 = 0;
+ TIM2->CR1 |= (1<<7);
+ TIM2->CR2 = 0;
+ TIM2->SMCR = 0;
+ TIM2->PSC = 3199;
+ TIM2->CNT = 0;
+ TIM2->ARR = PERIODO;
+ TIM2->CCR1 = DC;
+ TIM2->DIER = 0x0000;
+ TIM2->CCMR1 &= ~(0x0FF << (8*0));
+ TIM2->CCMR1 |= ((6 << 4)|(1<<3));
+ TIM2->CCER &= ~(0x0F << 0);
+ TIM2->CCER |= (1 << 0);
+ TIM2->CR1 |= 0x0001;
+ TIM2->EGR |= 0x
+
+
+
 
   //ADC & Buzzer
   /* ADC_IN4 ------------------------------------------------------------------*/
@@ -674,6 +696,8 @@ int main(void)
               {
                 winner = 2;
               }
+              
+              //TODO: check downloaded code from buzzer/src, stablish functionality and diff freqs.
 
               if (winner == 1)
               {
