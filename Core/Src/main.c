@@ -87,6 +87,9 @@ unsigned int y; // 2/3 point
 unsigned int timeout_time;
 unsigned int timer_count_limit;
 
+unsigned int octave3[7] = {130.812783, 146.832384, 164.813778, 174.614116, 195.997718, 220.000000, 246.941651};
+unsigned int octave4[7] = {261.625565, 293.664768, 329.627557, 349.228231, 391.995436, 440.000000, 493.883301};
+
 uint8_t text[6]; //ASCII character array to output in the Discovery LCD
 
 short duty_cycle = 1; //TODO: for TIM2 PWM
@@ -181,18 +184,6 @@ void TIM4_IRQHandler(void)
   TIM4->SR = 0x0;
 }
 
-//ADC
-//ADC IRQ to determine the countdown downstep of (0.5, 1 or 2 secs) depending on the
-void ADC1_IRQHandler(void)
-{
-  ADC1->SR &= ~(1 << 1); //End of Conversion (EOC) to 0, meaning we a conversion to do
-
-  if ((ADC1->SQR5 &0x001F) == 1)
-    ADC1->SQR5 = 0x05;
-  else if ((ADC1->SQR5 &0x001F) == 5)
-    ADC1->SQR5 = 0x01;
-}
-
 /* USER CODE END 0 */
 
 /**
@@ -202,7 +193,7 @@ void ADC1_IRQHandler(void)
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-  //GPIO_InitTypeDef GPIO_InitStruct; //For corrrect USART3 implementation with pins PC10 and PC11
+  GPIO_InitTypeDef GPIO_InitStruct; //For corrrect USART3 implementation with pins PC10 and PC11
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -237,16 +228,15 @@ int main(void)
   BSP_LCD_GLASS_Init();
   BSP_LCD_GLASS_BarLevelConfig(0);
   BSP_LCD_GLASS_Clear();
-  /** //For corrrect USART3 implementation with pins PC10 and PC11
-    GPIO_InitStruct.Pin = GPIO_PIN_10;
-    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-    GPIO_InitStruct.Pull = GPIO_PULLUP;
-    GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
-    GPIO_InitStruct.Alternate = GPIO_AF7_USART2;
-    HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
-    GPIO_InitStruct.Pin = GPIO_PIN_11;
-    HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
-   */
+  //For corrrect USART3 implementation with pins PC10 and PC11
+  GPIO_InitStruct.Pin = GPIO_PIN_10;
+  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
+  GPIO_InitStruct.Alternate = GPIO_AF7_USART3;
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+  GPIO_InitStruct.Pin = GPIO_PIN_11;
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
   //Pins + their EXTIs - I/O
   /* PB0 ---------------------------------------------------------------------*/
@@ -544,15 +534,12 @@ int main(void)
               while ((ADC1->SR &0x2) == 0); //While EOC is not flagged, wait
               adc_value = ADC1->DR; //Assign value after successfull conversion
               
+              /*
               //Testing check
               Bin2Ascii(adc_value, text);
               BSP_LCD_GLASS_DisplayString((uint8_t*) text);
               espera(2*sec);
-
-              //Start counters
-              TIM3->CR1 |= BIT_0;   //Set CEN = 1, Starts the counter
-              TIM3->EGR |= BIT_0;   //UG = 1 -> Generate an update event to update all registers
-              TIM3->SR = 0;         //Clear counter flags
+              */
 
               //This strucutre runs before each game setting the countdown mode based on the value read from the potentiometer when starting the game
               x = 1000; //1 volt
@@ -560,6 +547,11 @@ int main(void)
               if (adc_value < x) potentiometer_value = 1;
               else if (adc_value > y) potentiometer_value = 3;
               else potentiometer_value = 2;
+
+              //Start counters
+              TIM3->CR1 |= BIT_0;   //Set CEN = 1, Starts the counter
+              TIM3->EGR |= BIT_0;   //UG = 1 -> Generate an update event to update all registers
+              TIM3->SR = 0;         //Clear counter flags
 
               switch(potentiometer_value)
               {
@@ -601,6 +593,7 @@ int main(void)
                       countdown /= 500;
                       Bin2Ascii(countdown, text);
                       BSP_LCD_GLASS_DisplayString((uint8_t*) text);
+                      //HAL_UART_Transmit(&huart3, (uint8_t*) text, 6, 10000);
                     break;
                     case 2: //mid pos
                       //To display only whole numbers (1sec increments) if the
@@ -610,12 +603,14 @@ int main(void)
                       countdown /= 1000;
                       Bin2Ascii(countdown, text);
                       BSP_LCD_GLASS_DisplayString((uint8_t*) text);
+                      //HAL_UART_Transmit(&huart3, countdown, 6, 10000);
                     break;
                     case 3: //max pos
                       if(countdown%2000 != 0) break;
                       countdown /= 2000;
                       Bin2Ascii(countdown, text);
                       BSP_LCD_GLASS_DisplayString((uint8_t*) text);
+                      //HAL_UART_Transmit(&huart3, text, 6, 10000);
                     break;
                   }
 
@@ -1092,7 +1087,7 @@ static void MX_USART3_UART_Init(void)
 
   /* USER CODE END USART3_Init 1 */
   huart3.Instance = USART3;
-  huart3.Init.BaudRate = 115200;
+  huart3.Init.BaudRate = 9600;
   huart3.Init.WordLength = UART_WORDLENGTH_8B;
   huart3.Init.StopBits = UART_STOPBITS_1;
   huart3.Init.Parity = UART_PARITY_NONE;
