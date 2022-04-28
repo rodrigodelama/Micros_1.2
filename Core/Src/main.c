@@ -184,7 +184,7 @@ void TIM4_IRQHandler(void)
 //ADC IRQ to determine the countdown downstep of (0.5, 1 or 2 secs) depending on the
 void ADC1_IRQHandler(void)
 {
-  ADC1->SR &= ~(1 << 1); //what does this do (EOC to 0, meaning we have work to do yet)
+  ADC1->SR &= ~(1 << 1); //End of Conversion (EOC) to 0, meaning we a conversion to do
 
   if ((ADC1->SQR5 &0x001F) == 1)
     ADC1->SQR5 = 0x05;
