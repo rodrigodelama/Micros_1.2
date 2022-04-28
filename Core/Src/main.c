@@ -65,12 +65,13 @@ UART_HandleTypeDef huart3;
 unsigned int prev_game = 0;
 unsigned int game = 1; //GAME1 is the starting point
 unsigned int winner = 0; //Initialised to 0, if it never changes, it will generate an error
-unsigned int playing = 0; //Maintains the button interrupts disabled unless we are awaiting
-unsigned int btn_pressed = 0; //for game2 to exit countdown loop
+unsigned int playing = 0; //for game 1 - Maintains the button interrupts disabled unless we are awaiting
+unsigned int btn_pressed = 0; //for game2 - To exit countdown loop
 
 unsigned int time_3 = 0;
 unsigned int time_4ch1 = 0;
 unsigned int time_4ch2 = 0;
+unsigned int time_2ch1 = 0; //TODO: turn on when TIM2 is finished
 
 unsigned short delta;
 unsigned int randn;
@@ -80,15 +81,15 @@ unsigned int high_limit_randn;
 unsigned int countdown;
 unsigned int potentiometer_value;
 unsigned int adc_value;
-unsigned int x;
-unsigned int y;
+unsigned int x; // 1/3 point
+unsigned int y; // 2/3 point
 
-unsigned int timeout_time = 0;
-unsigned int timer_count_limit = 0;
+unsigned int timeout_time;
+unsigned int timer_count_limit;
 
 uint8_t text[6]; //ASCII character array to output in the Discovery LCD
 
-short duty_cycle = 1; //TODO:
+short duty_cycle = 1; //TODO: for TIM2 PWM
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -190,7 +191,6 @@ void ADC1_IRQHandler(void)
     ADC1->SQR5 = 0x05;
   else if ((ADC1->SQR5 &0x001F) == 5)
     ADC1->SQR5 = 0x01;
-
 }
 
 /* USER CODE END 0 */
@@ -354,7 +354,8 @@ int main(void)
                         //bit15 OC1CE always to 0
                         //bit14-12 OC1M to 110 - PWM with the cycle starting at 1
                         //bi11 OC1PE to 1 - the CCR1 value will be updated after an update event
-  TIM2->CCER = 0x0001;  //Enables the hardware output of TIM2_CH1
+  TIM2->CCER = 0x0010;  //Enables the hardware output of TIM2_CH1
+  //Plus CR1 and EGR to 0x1 to activate timer when needed
 
   //ADC & Buzzer
   /* ADC_IN4 ------------------------------------------------------------------*/
@@ -533,6 +534,7 @@ int main(void)
               btn_pressed = 0;
               time_4ch1 = 0;
               time_4ch2 = 0;
+              time_2ch1 = 0;
               high_limit_randn = 0;
               timer_count_limit = 0;
               timeout_time = 0;
@@ -706,6 +708,7 @@ int main(void)
                   //TIM2->CR1 |= 0x0001;
                   //TIM2->EGR |= 0x0001;
                   //use different increasing step (double the frequencies to change octave)
+                  //time_2ch1 // what??
                   BSP_LCD_GLASS_DisplayString((uint8_t*) " +");
                 }
 
