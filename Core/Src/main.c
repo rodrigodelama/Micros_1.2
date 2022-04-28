@@ -743,6 +743,16 @@ int main(void)
                 GPIOD->BSRR = (1 << 2) << 16;
                 TIM2->SR = 0;
               }
+              /** Checkpoint 4
+                //USART3 help code
+
+                HAL_UART_Transmit (&huart1,(uint8_t*) data , 5 ,0xFFFF);
+                // USER CODE END PV
+                HAL functions:
+                HAL_UART_Receive_IT(&huart1, (uint8_t*) data_rx , 1); 
+                HAL_UART_Receive(&huart1, (uint8_t*) data_rx , 1, 0xFFFF); 
+               */
+
             } //END OF GAME2
         break;
 
