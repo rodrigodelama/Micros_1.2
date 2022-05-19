@@ -329,7 +329,10 @@ int main(void)
 
   //FIXME:
   /* TIM2 --------------------------------------------------------------------*/
-  //Assigned to PA5
+  //Assigned to PA5 (10 - AFs)
+  GPIOA->MODER |= (1 << 5*2 + 1);
+  GPIOA->MODER &= ~(1 << 5*2);
+  GPIOA->AFR[0] |= (0x1 << 5*4); //0001 - AF1 - TIM2
   //SET-UP for TIM2_CH1 - PWM
   TIM2->CR1 = 0x0080;   //(ARPE=1, CEN=0: timer not counting yet)
   TIM2->CR2 = 0x0000;   //Always set to 0 in this course
@@ -387,10 +390,16 @@ int main(void)
   GPIOD->PUPDR &= ~(1 << (2*2 + 1));
   GPIOD->PUPDR |= (1 << (2*2));
 
-  //USART3
-  /* TX -----------------------------------------------------------------------*/
-  
-  /* RX -----------------------------------------------------------------------*/
+  /* USART --------------------------------------------------------------------*/
+  //RX - PC11 - AF (10)
+  GPIOC->MODER |= (1 << (11*2 + 1));
+  GPIOC->MODER &= ~(1 << (11*2));
+  GPIOA->AFR[0] |= (0x7 << (10*4)); // Writes 0111 in AFR11 - USART1_3
+  //TX - PC10
+  GPIOC->MODER |= (1 << (10*2 + 1));
+  GPIOC->MODER &= ~(1 << (10*2));
+  GPIOA->AFR[0] |= (0x7 << (10*4)); // Writes 0111 in AFR10
+  //USART3 registers
 
   //for USART3
   NVIC->ISER[1] |= (1 << 7); //position 39 (for ISER[1], 0 is 32, 7 is 39)
