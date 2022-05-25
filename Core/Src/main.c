@@ -363,8 +363,8 @@ int main(void)
   ADC1->CR2 = 0x00000412;     // EOCS = 1 (EOC is activated after each conversion)
                               // DELS = 001 (delay till data is read)
                               // CONT = 1 (continuous conversion)
-  ADC1->SQR1 = 0x00000000;    // Set to 0 - activates 1 channel
-  ADC1->SQR5 = 0x00000004;    // Selected channel is AIN4
+  ADC1->SQR1 = 0x00000000;    // Set to 0 - 1 conversion
+  ADC1->SQR5 = 0x00000004;    // Selected first and only conversion is AIN4
   ADC1->CR2 |= 0x00000001;    // ADON = 1 (ADC powered on)
 
   /* BUZZER -------------------------------------------------------------------*/
