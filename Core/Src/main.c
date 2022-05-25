@@ -394,11 +394,12 @@ int main(void)
   //RX - PC11 - AF (10)
   GPIOC->MODER |= (1 << (11*2 + 1));
   GPIOC->MODER &= ~(1 << (11*2));
-  GPIOA->AFR[0] |= (0x7 << (10*4)); // Writes 0111 in AFR11 - USART1_3
+  GPIOA->AFR[1] |= (0x7 << (10*4)); // Writes 0111 in AFRH for pin 11 - USART1_3
+                    //change 0x7 bc it probably wont work
   //TX - PC10
   GPIOC->MODER |= (1 << (10*2 + 1));
   GPIOC->MODER &= ~(1 << (10*2));
-  GPIOA->AFR[0] |= (0x7 << (10*4)); // Writes 0111 in AFR10
+  GPIOA->AFR[1] |= (0x7 << (10*4)); // Writes 0111 in AFRH for pin 10
   //USART3 registers
 
   //for USART3
